@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eFuel Cost Calculator — Methanol Production Economics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #0f0f1a;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --accent: #0A84FF;
+    --accent-dim: rgba(10,132,255,0.15);
+    --green: #30D158;
+    --red: #FF453A;
+    --amber: #FF9F0A;
+    --text: #ffffff;
+    --text2: rgba(255,255,255,0.6);
+    --text3: rgba(255,255,255,0.35);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --transition: 0.2s ease;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--card-border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #0A84FF, #5E5CE6);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .header-titles h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+
+  .header-titles p {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.2px;
+  }
+
+  .brineworks-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 5px 12px 5px 8px;
+    font-size: 11px;
+    color: var(--text2);
+    text-decoration: none;
+    transition: all var(--transition);
+  }
+  .brineworks-badge:hover { border-color: var(--accent); color: var(--accent); }
+  .brineworks-badge .dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* ─── LAYOUT ─── */
+  .app-layout {
+    display: flex;
+    min-height: calc(100vh - 60px);
+    gap: 0;
+  }
+
+  /* ─── LEFT PANEL ─── */
+  .sidebar {
+    width: 360px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.025);
+    border-right: 1px solid var(--card-border);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 14px;
+  }
+
+  .input-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ─── SLIDER ROW ─── */
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .slider-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+  }
+
+  .slider-value-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .slider-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: right;
+    width: 60px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 2px 6px;
+    color: var(--text);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .slider-value:focus { border-color: var(--accent); }
+
+  .slider-unit {
+    font-size: 11px;
+    color: var(--text3);
+    min-width: 36px;
+  }
+
+  /* Custom slider */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(10,132,255,0.2);
+    transition: box-shadow var(--transition), transform var(--transition);
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 0 5px rgba(10,132,255,0.3);
+    transform: scale(1.1);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 0 3px rgba(10,132,255,0.2);
+  }
+
+  /* Track fill */
+  input[type="range"].filled {
+    background: linear-gradient(to right, var(--accent) var(--pct, 0%), rgba(255,255,255,0.1) var(--pct, 0%));
+  }
+
+  /* ─── CO2 TOGGLE ─── */
+  .co2-toggle-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 4px;
+    margin-top: 12px;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: inherit;
+    text-align: center;
+  }
+  .toggle-btn.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(10,132,255,0.4);
+  }
+  .toggle-btn.active.biogenic {
+    background: var(--green);
+    box-shadow: 0 2px 8px rgba(48,209,88,0.3);
+  }
+
+  .dac-note {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .dac-note.visible {
+    opacity: 1;
+    max-height: 40px;
+  }
+
+  /* ─── ADVANCED SECTION ─── */
+  .advanced-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    transition: background var(--transition);
+  }
+  .advanced-toggle:hover { background: rgba(255,255,255,0.07); }
+
+  .advanced-arrow {
+    margin-left: auto;
+    color: var(--text3);
+    transition: transform 0.3s ease;
+    font-size: 12px;
+  }
+  .advanced-arrow.open { transform: rotate(180deg); }
+
+  .advanced-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+  }
+
+  .advanced-content {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.4s ease;
+  }
+  .advanced-content.open { max-height: 400px; }
+
+  .advanced-inner {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ─── RIGHT PANEL ─── */
+  .main-content {
+    flex: 1;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  /* ─── HERO METRIC ─── */
+  .hero-card {
+    background: linear-gradient(135deg, rgba(10,132,255,0.08) 0%, rgba(94,92,230,0.05) 100%);
+    border: 1px solid rgba(10,132,255,0.2);
+    border-radius: 20px;
+    padding: 32px 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(10,132,255,0.12), transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-left {}
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .hero-cost {
+    font-size: 72px;
+    font-weight: 700;
+    letter-spacing: -3px;
+    line-height: 1;
+    color: var(--text);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .hero-cost .currency {
+    font-size: 32px;
+    font-weight: 400;
+    margin-top: 12px;
+    color: var(--text2);
+  }
+  .hero-cost .unit-label {
+    font-size: 16px;
+    font-weight: 400;
+    margin-top: 44px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  .hero-right {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-end;
+  }
+
+  .secondary-metric {
+    text-align: right;
+  }
+  .secondary-metric .s-label {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.3px;
+  }
+  .secondary-metric .s-value {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -1px;
+    color: var(--text);
+    transition: all 0.3s ease;
+  }
+  .secondary-metric .s-unit {
+    font-size: 13px;
+    color: var(--text2);
+    margin-left: 2px;
+  }
+
+  /* ─── BENCHMARK BAR ─── */
+  .benchmark-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+
+  .benchmark-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .benchmark-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+  }
+
+  .benchmark-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    transition: all var(--transition);
+  }
+  .benchmark-badge.green { background: rgba(48,209,88,0.15); color: var(--green); }
+  .benchmark-badge.red { background: rgba(255,69,58,0.15); color: var(--red); }
+
+  .benchmark-track {
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    position: relative;
+    overflow: visible;
+    margin-bottom: 10px;
+  }
+  .benchmark-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 100%;
+  }
+  .benchmark-marker {
+    position: absolute;
+    top: -4px;
+    height: 14px;
+    width: 2px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 1px;
+  }
+  .benchmark-marker-label {
+    position: absolute;
+    top: 16px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+
+  .benchmark-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 8px;
+  }
+
+  /* ─── BOTTOM ROW ─── */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* ─── CHART CARD ─── */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 20px;
+    letter-spacing: -0.1px;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .donut-center {
+    position: absolute;
+    text-align: center;
+    pointer-events: none;
+  }
+  .donut-center .dc-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .donut-center .dc-label {
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  /* ─── BREAKDOWN TABLE ─── */
+  .breakdown-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background var(--transition);
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+
+  .breakdown-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .breakdown-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text2);
+  }
+
+  .breakdown-pct {
+    font-size: 12px;
+    color: var(--text3);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  .breakdown-val {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 80px;
+    text-align: right;
+    transition: all 0.3s ease;
+  }
+
+  /* ─── INSIGHT CARD ─── */
+  .insight-card {
+    background: linear-gradient(135deg, rgba(10,132,255,0.06), rgba(94,92,230,0.04));
+    border: 1px solid rgba(10,132,255,0.15);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .insight-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .insight-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text2);
+  }
+  .insight-text strong { color: var(--text); }
+
+  /* ─── FOOTER ─── */
+  footer {
+    border-top: 1px solid var(--card-border);
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .app-layout { flex-direction: column; }
+    .sidebar {
+      width: 100%;
+      position: static;
+      height: auto;
+    }
+    .main-content { padding: 20px; }
+    .hero-cost { font-size: 52px; }
+    .bottom-row { grid-template-columns: 1fr; }
+    header { padding: 0 16px; }
+    .brineworks-badge span { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    .hero-card { flex-direction: column; align-items: flex-start; }
+    .hero-right { align-items: flex-start; }
+    .hero-cost { font-size: 44px; letter-spacing: -2px; }
+    .hero-cost .currency { font-size: 24px; margin-top: 8px; }
+    .hero-cost .unit-label { font-size: 13px; margin-top: 30px; }
+    footer { flex-direction: column; gap: 6px; text-align: center; }
+  }
+
+  /* Number animation */
+  .num-flash {
+    animation: numFlash 0.3s ease;
+  }
+  @keyframes numFlash {
+    0% { opacity: 0.5; transform: scale(0.97); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Tooltip */
+  [data-tip] {
+    position: relative;
+    cursor: help;
+  }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20,20,30,0.95);
+    border: 1px solid var(--card-border);
+    color: var(--text2);
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 50;
+    max-width: 220px;
+    white-space: normal;
+    text-align: center;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo-icon">⚗️</div>
+    <div class="header-titles">
+      <h1>eFuel Cost Calculator</h1>
+      <p>Methanol production economics</p>
+    </div>
+  </div>
+  <a class="brineworks-badge" href="https://brineworks.tech" target="_blank" rel="noopener">
+    <div class="dot"></div>
+    <span>Powered by Brineworks</span>
+  </a>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="app-layout">
+
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar">
+    <div>
+      <div class="section-label">Energy</div>
+      <div class="input-card">
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label" data-tip="Wholesale electricity cost delivered to the electrolyzer">Electricity Price</span>
+            <div class="slider-value-wrap">
+              <input type="number" class="slider-value" id="elec-val" value="40" min="10" max="150" step="1">
+              <span class="slider-unit">€/MWh</span>
+            </div>
+          </div>
+          <input type="range" class="filled" id="elec-slider" min="10" max="150" value="40" step="1">
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label" data-tip="Fraction of time the electrolyzer operates at full capacity — driven by renewable availability">Capacity Factor</span>
+            <div class="slider-value-wrap">
+              <input type="number" class="slider-value" id="cf-val" value="50" min="10" max="95" step="1">
+              <span class="slider-unit">%</span>
+            </div>
+          </div>
+          <input type="range" class="filled" id="cf-slider" min="10" max="95" value="50" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Electrolyzer</div>
+      <div class="input-card">
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-label" data-tip="All-in installed cost of the electrolyzer system per kW of capacity">System CAPEX</span>
+            <div class="slider-value-wrap">
+              <input type="number" class="slider-value" id="capex-val" value="800" min="200" max="2000" step="10">
+              <span class="slider-unit">€/kW</span>
+            </div>
+          </div>
+          <input type="range" class="filled" id="capex-slider" min="200" max="2000" value="800" step="10">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">CO₂ Source</div>
+      <div class="co2-toggle-card">
+        <div class="toggle-row">
+          <button class="toggle-btn biogenic active" id="btn-biogenic" onclick="setCO2Source('biogenic')">🌿 Biogenic</button>
+          <button class="toggle-btn" id="btn-dac" onclick="setCO2Source('dac')">🌬️ DAC</button>
+        </div>
+        <div class="dac-note" id="dac-note">
+          <span>⚡</span>
+          <span>Brineworks targets &lt;$200/tonne by 2030</span>
+        </div>
+        <div style="margin-top:14px">
+          <div class="slider-row">
+            <div class="slider-header">
+              <span class="slider-label">CO₂ Price</span>
+              <div class="slider-value-wrap">
+                <input type="number" class="slider-value" id="co2-val" value="50" min="0" max="600" step="5">
+                <span class="slider-unit">€/t</span>
+              </div>
+            </div>
+            <input type="range" class="filled" id="co2-slider" min="0" max="600" value="50" step="5">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADVANCED -->
+    <div>
+      <div class="advanced-toggle" onclick="toggleAdvanced()">
+        <span style="font-size:14px">⚙️</span>
+        <span class="advanced-label">Advanced Parameters</span>
+        <span class="advanced-arrow" id="adv-arrow">▾</span>
+      </div>
+      <div class="advanced-content" id="adv-content">
+        <div class="advanced-inner">
+          <div class="slider-row">
+            <div class="slider-header">
+              <span class="slider-label" data-tip="Weighted average cost of capital for project financing">Discount Rate</span>
+              <div class="slider-value-wrap">
+                <input type="number" class="slider-value" id="dr-val" value="8" min="2" max="20" step="0.5">
+                <span class="slider-unit">%</span>
+              </div>
+            </div>
+            <input type="range" class="filled" id="dr-slider" min="2" max="20" value="8" step="0.5">
+          </div>
+          <div class="slider-row">
+            <div class="slider-header">
+              <span class="slider-label">Project Lifetime</span>
+              <div class="slider-value-wrap">
+                <input type="number" class="slider-value" id="life-val" value="20" min="5" max="30" step="1">
+                <span class="slider-unit">yr</span>
+              </div>
+            </div>
+            <input type="range" class="filled" id="life-slider" min="5" max="30" value="20" step="1">
+          </div>
+          <div class="slider-row">
+            <div class="slider-header">
+              <span class="slider-label" data-tip="Electrolyzer system efficiency (H2 LHV basis). Higher = less electricity per kg H2.">Electrolyzer Efficiency</span>
+              <div class="slider-value-wrap">
+                <input type="number" class="slider-value" id="eff-val" value="67" min="50" max="90" step="1">
+                <span class="slider-unit">%</span>
+              </div>
+            </div>
+            <input type="range" class="filled" id="eff-slider" min="50" max="90" value="67" step="1">
+          </div>
+          <div class="slider-row">
+            <div class="slider-header">
+              <span class="slider-label" data-tip="Annual operations & maintenance cost as % of electrolyzer CAPEX">O&amp;M (% of CAPEX)</span>
+              <div class="slider-value-wrap">
+                <input type="number" class="slider-value" id="om-val" value="3" min="1" max="8" step="0.5">
+                <span class="slider-unit">%</span>
+              </div>
+            </div>
+            <input type="range" class="filled" id="om-slider" min="1" max="8" value="3" step="0.5">
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ─── MAIN CONTENT ─── -->
+  <main class="main-content">
+
+    <!-- HERO -->
+    <div class="hero-card">
+      <div class="hero-left">
+        <div class="hero-eyebrow">Total Methanol Production Cost</div>
+        <div class="hero-cost">
+          <span class="currency">€</span>
+          <span id="hero-num">—</span>
+          <span class="unit-label">/tonne MeOH</span>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="secondary-metric">
+          <div class="s-label">Levelized Cost of Hydrogen</div>
+          <div class="s-value"><span id="lcoh-num">—</span><span class="s-unit">€/kg H₂</span></div>
+        </div>
+        <div class="secondary-metric">
+          <div class="s-label">Full-Load Hours</div>
+          <div class="s-value"><span id="flh-num">—</span><span class="s-unit">h/yr</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BENCHMARK -->
+    <div class="benchmark-card">
+      <div class="benchmark-header">
+        <span class="benchmark-title">vs. Fossil Methanol Benchmark (~€350/tonne)</span>
+        <span class="benchmark-badge" id="bench-badge">calculating…</span>
+      </div>
+      <div class="benchmark-track">
+        <div class="benchmark-fill" id="bench-fill" style="width:0%;background:var(--accent)"></div>
+        <div class="benchmark-marker" id="bench-marker" style="left:50%">
+          <span class="benchmark-marker-label">€350 fossil</span>
+        </div>
+      </div>
+      <div class="benchmark-labels">
+        <span>€0</span>
+        <span id="bench-max-label">€700</span>
+      </div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div class="bottom-row">
+
+      <!-- DONUT CHART -->
+      <div class="chart-card">
+        <div class="card-title">Cost Breakdown</div>
+        <div class="chart-wrap">
+          <canvas id="donut-chart"></canvas>
+          <div class="donut-center">
+            <div class="dc-value" id="donut-total">—</div>
+            <div class="dc-label">€/tonne</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BREAKDOWN TABLE -->
+      <div class="breakdown-card">
+        <div class="card-title">Component Detail</div>
+        <div class="breakdown-row">
+          <div class="breakdown-dot" style="background:#0A84FF"></div>
+          <div class="breakdown-name">Electricity (H₂ production)</div>
+          <div class="breakdown-pct" id="pct-elec">—</div>
+          <div class="breakdown-val" id="val-elec">—</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-dot" style="background:#5E5CE6"></div>
+          <div class="breakdown-name">Electrolyzer CAPEX + O&amp;M</div>
+          <div class="breakdown-pct" id="pct-capex">—</div>
+          <div class="breakdown-val" id="val-capex">—</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-dot" style="background:#30D158"></div>
+          <div class="breakdown-name">CO₂ Cost</div>
+          <div class="breakdown-pct" id="pct-co2">—</div>
+          <div class="breakdown-val" id="val-co2">—</div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-dot" style="background:#FF9F0A"></div>
+          <div class="breakdown-name">Methanol Synthesis</div>
+          <div class="breakdown-pct" id="pct-synth">—</div>
+          <div class="breakdown-val" id="val-synth">—</div>
+        </div>
+        <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center">
+          <span style="font-size:13px; font-weight:600; color:var(--text)">Total</span>
+          <span style="font-size:16px; font-weight:700; color:var(--text)" id="total-val">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHT -->
+    <div class="insight-card" id="insight-card">
+      <div class="insight-icon">💡</div>
+      <div class="insight-text" id="insight-text">Adjust the inputs to see cost drivers and tradeoffs...</div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <span>Built for eFuel project developers. Based on standard techno-economic modeling assumptions.</span>
+      <span>H₂ stoichiometry: 187.5 kg/tMeOH · CO₂: 1.375 t/tMeOH · Synthesis CAPEX: €500/tMeOH capacity</span>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  elec: 40,
+  cf: 50,
+  capex: 800,
+  co2Source: 'biogenic',
+  co2: 50,
+  dr: 8,
+  life: 20,
+  eff: 67,
+  om: 3,
+};
+
+const FOSSIL_BENCHMARK = 350;
+const H2_HHV = 33.3; // kWh/kg H2
+const H2_PER_MEOH = 187.5; // kg H2 / tonne MeOH
+const CO2_PER_MEOH = 1.375; // tonne CO2 / tonne MeOH
+const SYNTH_CAPEX = 500; // €/tonne-MeOH/year capacity
+const SYNTH_OM = 0.04;
+
+// ─── CHART ───────────────────────────────────────────────────────────────────
+const ctx = document.getElementById('donut-chart').getContext('2d');
+const donutChart = new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Electricity', 'Electrolyzer CAPEX+O&M', 'CO₂', 'Synthesis'],
+    datasets: [{
+      data: [1, 1, 1, 1],
+      backgroundColor: ['#0A84FF', '#5E5CE6', '#30D158', '#FF9F0A'],
+      borderColor: 'transparent',
+      borderWidth: 0,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '72%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` €${Math.round(ctx.raw)}/tonne (${Math.round(ctx.raw / ctx.dataset.data.reduce((a,b)=>a+b,0) * 100)}%)`
+        },
+        backgroundColor: 'rgba(15,15,26,0.95)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleFont: { family: '-apple-system, BlinkMacSystemFont, SF Pro Display, sans-serif', size: 12 },
+        bodyFont: { family: '-apple-system, BlinkMacSystemFont, SF Pro Display, sans-serif', size: 12 },
+        padding: 10,
+      }
+    },
+    animation: { animateRotate: true, duration: 400, easing: 'easeOutCubic' }
+  }
+});
+
+// ─── CALCULATIONS ─────────────────────────────────────────────────────────────
+function crf(r, n) {
+  const rr = r / 100;
+  return rr * Math.pow(1 + rr, n) / (Math.pow(1 + rr, n) - 1);
+}
+
+function calc() {
+  const { elec, cf, capex, co2, dr, life, eff, om } = state;
+
+  const CRF = crf(dr, life);
+  const energy_consumption = 1000 / (eff / 100) / H2_HHV; // kWh/kg H2
+  const full_load_hours = (cf / 100) * 8760; // h/yr
+  const production_per_kW = full_load_hours / energy_consumption; // kg H2 / kW / yr
+
+  // LCOH
+  const energy_term = (elec / 1000) * energy_consumption;
+  const annual_capex_per_kW = capex * CRF;
+  const annual_om_per_kW = capex * (om / 100);
+  const LCOH = energy_term + (annual_capex_per_kW + annual_om_per_kW) / production_per_kW;
+
+  // Electricity share of LCOH
+  const lcoh_elec = energy_term;
+  const lcoh_capex = (annual_capex_per_kW + annual_om_per_kW) / production_per_kW;
+
+  // Methanol costs (€/tonne MeOH)
+  const h2_cost = LCOH * H2_PER_MEOH;
+  const h2_elec_share = lcoh_elec * H2_PER_MEOH;
+  const h2_capex_share = lcoh_capex * H2_PER_MEOH;
+  const co2_cost = co2 * CO2_PER_MEOH;
+  const synth_cost = SYNTH_CAPEX * (CRF + SYNTH_OM);
+  const total = h2_elec_share + h2_capex_share + co2_cost + synth_cost;
+
+  return {
+    LCOH, CRF, energy_consumption,
+    full_load_hours,
+    h2_elec_share, h2_capex_share,
+    co2_cost, synth_cost, total
+  };
+}
+
+// ─── UI UPDATE ────────────────────────────────────────────────────────────────
+function animateNum(el, val, decimals = 0, prefix = '', suffix = '') {
+  el.classList.remove('num-flash');
+  void el.offsetWidth; // reflow
+  el.classList.add('num-flash');
+  el.textContent = prefix + val.toFixed(decimals) + suffix;
+}
+
+function update() {
+  const r = calc();
+
+  // Hero
+  animateNum(document.getElementById('hero-num'), r.total, 0);
+  animateNum(document.getElementById('lcoh-num'), r.LCOH, 2);
+  animateNum(document.getElementById('flh-num'), r.full_load_hours, 0);
+  animateNum(document.getElementById('donut-total'), r.total, 0);
+
+  // Benchmark
+  const BENCH_MAX = Math.max(r.total * 1.4, FOSSIL_BENCHMARK * 1.5);
+  const pct = Math.min((r.total / BENCH_MAX) * 100, 100);
+  const markerPct = (FOSSIL_BENCHMARK / BENCH_MAX) * 100;
+  const benchFill = document.getElementById('bench-fill');
+  const below = r.total < FOSSIL_BENCHMARK;
+  benchFill.style.width = pct + '%';
+  benchFill.style.background = below ? 'var(--green)' : 'var(--red)';
+  document.getElementById('bench-marker').style.left = markerPct + '%';
+  document.getElementById('bench-max-label').textContent = '€' + Math.round(BENCH_MAX);
+  const badge = document.getElementById('bench-badge');
+  const diff = Math.abs(r.total - FOSSIL_BENCHMARK);
+  if (below) {
+    badge.className = 'benchmark-badge green';
+    badge.textContent = `✓ €${Math.round(diff)} below fossil`;
+  } else {
+    badge.className = 'benchmark-badge red';
+    badge.textContent = `↑ €${Math.round(diff)} above fossil`;
+  }
+
+  // Breakdown
+  const comps = [r.h2_elec_share, r.h2_capex_share, r.co2_cost, r.synth_cost];
+  const ids = ['elec', 'capex', 'co2', 'synth'];
+  comps.forEach((v, i) => {
+    const pct = (v / r.total * 100).toFixed(0);
+    document.getElementById(`pct-${ids[i]}`).textContent = pct + '%';
+    animateNum(document.getElementById(`val-${ids[i]}`), v, 0, '€', '/t');
+  });
+  animateNum(document.getElementById('total-val'), r.total, 0, '€', '/t');
+
+  // Chart
+  donutChart.data.datasets[0].data = comps;
+  donutChart.update('none');
+
+  // Insight
+  const co2Pct = (r.co2_cost / r.total * 100).toFixed(0);
+  const biogenicCO2Cost = 50 * CO2_PER_MEOH;
+  const dacCO2Cost = 300 * CO2_PER_MEOH;
+  const switchSavings = Math.abs(dacCO2Cost - biogenicCO2Cost).toFixed(0);
+  const dominantIdx = comps.indexOf(Math.max(...comps));
+  const dominantNames = ['Electricity', 'Electrolyzer CAPEX & O&M', 'CO₂', 'Methanol synthesis'];
+  const dominantPct = (comps[dominantIdx] / r.total * 100).toFixed(0);
+
+  let insight;
+  if (state.co2Source === 'dac') {
+    insight = `In DAC mode, CO₂ accounts for <strong>${co2Pct}%</strong> of total cost (€${r.co2_cost.toFixed(0)}/tonne MeOH). Brineworks' sub-$200/tonne DAC target would reduce total cost by ~<strong>€${((state.co2 - 200) * CO2_PER_MEOH).toFixed(0)}/tonne</strong> vs current price.`;
+    if (state.co2 <= 200) {
+      insight = `At $200/tonne CO₂, DAC is approaching biogenic cost parity. <strong>CO₂ at ${co2Pct}% of total cost</strong>. Brineworks is already at target range — this makes eFuel economics very competitive.`;
+    }
+  } else if (dominantIdx === 0) {
+    insight = `Electricity is the dominant cost at <strong>${dominantPct}%</strong> of total. Switching from biogenic to DAC CO₂ (€300/t) would add ~<strong>€${switchSavings}/tonne</strong> to final methanol cost.`;
+  } else if (dominantIdx === 1) {
+    insight = `Electrolyzer CAPEX & O&M drives <strong>${dominantPct}%</strong> of cost — typical at low capacity factors. Consider higher utilization or lower-cost electrolyzer to reduce this.`;
+  } else {
+    insight = `<strong>${dominantNames[dominantIdx]}</strong> is the largest cost driver at <strong>${dominantPct}%</strong>. CO₂ alone contributes €${r.co2_cost.toFixed(0)}/tonne MeOH at current prices.`;
+  }
+  document.getElementById('insight-text').innerHTML = insight;
+}
+
+// ─── SLIDER BINDING ──────────────────────────────────────────────────────────
+function bindSlider(sliderId, valId, stateKey, min, max) {
+  const slider = document.getElementById(sliderId);
+  const val = document.getElementById(valId);
+
+  function updateFill(el) {
+    const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+    el.style.setProperty('--pct', pct + '%');
+  }
+
+  slider.addEventListener('input', () => {
+    val.value = slider.value;
+    state[stateKey] = parseFloat(slider.value);
+    updateFill(slider);
+    update();
+  });
+
+  val.addEventListener('input', () => {
+    let v = parseFloat(val.value);
+    if (isNaN(v)) return;
+    v = Math.max(min, Math.min(max, v));
+    slider.value = v;
+    state[stateKey] = v;
+    updateFill(slider);
+    update();
+  });
+
+  val.addEventListener('blur', () => {
+    let v = parseFloat(val.value);
+    if (isNaN(v)) v = state[stateKey];
+    v = Math.max(min, Math.min(max, v));
+    val.value = v;
+    slider.value = v;
+    state[stateKey] = v;
+    updateFill(slider);
+    update();
+  });
+
+  // Init fill
+  updateFill(slider);
+}
+
+bindSlider('elec-slider', 'elec-val', 'elec', 10, 150);
+bindSlider('cf-slider', 'cf-val', 'cf', 10, 95);
+bindSlider('capex-slider', 'capex-val', 'capex', 200, 2000);
+bindSlider('co2-slider', 'co2-val', 'co2', 0, 600);
+bindSlider('dr-slider', 'dr-val', 'dr', 2, 20);
+bindSlider('life-slider', 'life-val', 'life', 5, 30);
+bindSlider('eff-slider', 'eff-val', 'eff', 50, 90);
+bindSlider('om-slider', 'om-val', 'om', 1, 8);
+
+// Init all fills
+document.querySelectorAll('input[type="range"]').forEach(el => {
+  const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+});
+
+// ─── CO2 SOURCE TOGGLE ───────────────────────────────────────────────────────
+function setCO2Source(source) {
+  state.co2Source = source;
+  const dacNote = document.getElementById('dac-note');
+  const btnBio = document.getElementById('btn-biogenic');
+  const btnDac = document.getElementById('btn-dac');
+  const slider = document.getElementById('co2-slider');
+  const val = document.getElementById('co2-val');
+
+  if (source === 'biogenic') {
+    btnBio.classList.add('active', 'biogenic');
+    btnDac.classList.remove('active');
+    btnDac.classList.remove('biogenic');
+    dacNote.classList.remove('visible');
+    slider.value = 50; val.value = 50;
+    slider.max = 200; val.max = 200;
+    state.co2 = 50;
+  } else {
+    btnDac.classList.add('active');
+    btnBio.classList.remove('active', 'biogenic');
+    dacNote.classList.add('visible');
+    slider.value = 300; val.value = 300;
+    slider.max = 600; val.max = 600;
+    state.co2 = 300;
+    slider.min = 0; val.min = 0;
+  }
+  const pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+  slider.style.setProperty('--pct', pct + '%');
+  update();
+}
+
+// ─── ADVANCED TOGGLE ─────────────────────────────────────────────────────────
+let advOpen = false;
+function toggleAdvanced() {
+  advOpen = !advOpen;
+  document.getElementById('adv-content').classList.toggle('open', advOpen);
+  document.getElementById('adv-arrow').classList.toggle('open', advOpen);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+update();
+</script>
+</body>
+</html>
