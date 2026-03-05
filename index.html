@@ -149,8 +149,6 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 }
 .param-value-row select:focus { border-color: var(--accent); }
 .param-value-row select option { background: #1c1c28; color: var(--text); }
-#g-location-input:focus { border-color: var(--accent); }
-
 .scale-fixed-display {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
@@ -555,13 +553,60 @@ tbody tr:last-child td.winner-col {
 
 /* ── MOBILE ── */
 @media (max-width: 700px) {
-  header { padding: 0 16px; }
-  main { padding: 16px 12px 40px; }
-  .shared-params { padding: 14px 16px; }
-  .shared-params-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
-  .fuel-pathway-section { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .headline-scenario-item { min-width: 100px; }
-  .headline-cost { font-size: 26px; }
+  header {
+    padding: 10px 14px; height: auto; min-height: 54px;
+    flex-wrap: wrap; gap: 6px;
+  }
+  .header-left h1 { font-size: 16px; }
+  .header-left p { font-size: 11px; }
+  .brineworks-badge { font-size: 10px; padding: 4px 10px; }
+
+  main { padding: 12px 12px 40px; }
+
+  .shared-params { padding: 12px 14px; }
+  .shared-params-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .fuel-pathway-section { padding: 10px 14px; flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  /* Stack scenario cards vertically — no horizontal bleed */
+  .scenarios-grid {
+    flex-direction: column;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+  .scenario-card { min-width: unset; width: 100%; }
+
+  /* Headline metrics stack vertically */
+  .headline-metrics { padding: 14px 16px; }
+  .headline-scenarios { flex-direction: column; gap: 0; }
+  .headline-scenario-item {
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 10px 0; min-width: unset;
+  }
+  .headline-scenario-item:last-child { border-bottom: none; }
+  .headline-cost { font-size: 28px; }
+
+  .chart-card { padding: 14px 12px; }
+  .sensitivity-card { padding: 14px 12px; }
+  .insight-card { padding: 14px 14px; }
+
+  /* Constrain tooltips so they don't bleed off screen */
+  .tooltip-popup { width: 190px; left: 0; transform: none; }
+  .tooltip-popup::after { left: 14px; transform: none; }
+
+  /* Narrower number inputs */
+  .param-value-row input[type=number],
+  .sync-row input[type=number] { width: 58px; font-size: 12px; }
+
+  /* Results table: allow horizontal scroll inside its container */
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+}
+
+@media (max-width: 480px) {
+  .shared-params-grid { grid-template-columns: 1fr; }
+  .header-left p { display: none; }
+  main { padding: 10px 10px 40px; }
 }
 </style>
 </head>
@@ -596,27 +641,6 @@ tbody tr:last-child td.winner-col {
           </div>
         </div>
         <div class="scale-fixed-display">200,000 t/yr (fixed)</div>
-      </div>
-
-      <!-- Location -->
-      <div class="param-group">
-        <div class="param-label">
-          Project Location
-          <div class="tooltip-wrap">
-            <div class="tooltip-icon">?</div>
-            <div class="tooltip-popup">Type any country to set the climate zone. Brineworks TEA parameters (CapEx &amp; H₂ co-production rate) are drawn from the nearest climate proxy (Norway / Morocco / Spain / Netherlands).</div>
-          </div>
-        </div>
-        <div class="param-value-row" style="flex-direction:column;align-items:stretch;gap:6px">
-          <input type="text" id="g-location-input" list="country-datalist"
-            placeholder="Type a country…"
-            autocomplete="off"
-            style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:var(--text);font-size:13px;font-weight:600;padding:6px 10px;outline:none;transition:border-color 0.2s;font-family:inherit;width:100%">
-          <datalist id="country-datalist"></datalist>
-          <div id="proxy-indicator" class="coverage-info" style="margin-top:0;font-size:11px">
-            🌍 Using Norway climate data
-          </div>
-        </div>
       </div>
 
       <!-- Electricity Price -->
@@ -848,8 +872,8 @@ function toTitleCase(str) {
   return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// State: resolved proxy for the current location input
-let currentLocationProxy = 'Norway';
+// Internal climate proxy — not exposed in UI
+let currentLocationProxy = 'Spain';
 
 function getProxyForCountry(input) {
   const key = input.trim().toLowerCase();
@@ -1821,30 +1845,6 @@ function updateSensitivity(results, g) {
 // ═══════════════════════════════════════════
 
 function init() {
-  populateCountryDatalist();
-
-  // Set default country and proxy
-  const locationInput = document.getElementById('g-location-input');
-  if (locationInput) {
-    locationInput.value = 'Norway';
-    updateProxyIndicator('Norway');
-
-    // Debounce timer
-    let proxyDebounce = null;
-    locationInput.addEventListener('input', () => {
-      clearTimeout(proxyDebounce);
-      proxyDebounce = setTimeout(() => {
-        updateProxyIndicator(locationInput.value);
-        recalc();
-      }, 350);
-    });
-    locationInput.addEventListener('change', () => {
-      clearTimeout(proxyDebounce);
-      updateProxyIndicator(locationInput.value);
-      recalc();
-    });
-  }
-
   initCharts();
   DEFAULT_SCENARIOS.forEach(d => addScenario(d));
 }
