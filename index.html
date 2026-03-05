@@ -149,14 +149,6 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 }
 .param-value-row select:focus { border-color: var(--accent); }
 .param-value-row select option { background: #1c1c28; color: var(--text); }
-.scale-fixed-display {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 8px; padding: 6px 12px;
-  font-size: 13px; font-weight: 600; color: var(--text);
-  display: flex; align-items: center;
-  min-height: 34px;
-}
 
 /* ── TOOLTIP ── */
 .tooltip-wrap { position: relative; display: inline-flex; }
@@ -631,16 +623,22 @@ tbody tr:last-child td.winner-col {
     <div class="shared-params-title">⚙️ Shared Parameters — apply to all scenarios</div>
     <div class="shared-params-grid">
 
-      <!-- Project Scale: Fixed -->
+      <!-- Project Capacity: Editable, snaps to TEA axis -->
       <div class="param-group">
         <div class="param-label">
-          Project Scale
+          Project Capacity (t/yr)
           <div class="tooltip-wrap">
             <div class="tooltip-icon">?</div>
-            <div class="tooltip-popup">Economies of scale not yet modelled. Fixed at 200,000 t/yr reference scale.</div>
+            <div class="tooltip-popup">Annual methanol production. Brineworks CapEx scales non-linearly with capacity (~C^0.7) due to balance-of-plant economies. TEA axis breakpoints: 5k · 8k · 15k · 30k · 60k · 120k · 250k · 500k · 750k · 1M t/yr.</div>
           </div>
         </div>
-        <div class="scale-fixed-display">200,000 t/yr (fixed)</div>
+        <div class="param-value-row">
+          <input type="range" id="g-cap-r" min="0" max="9" step="1" value="6"
+            oninput="snapCapFromSlider(this.value)">
+          <input type="number" id="g-cap-n" min="5000" max="1000000" step="1000" value="250000"
+            oninput="snapCapFromNumber(this.value)">
+        </div>
+        <div id="g-cap-label" style="font-size:11px;color:var(--text3);margin-top:4px">250,000 t/yr</div>
       </div>
 
       <!-- Electricity Price -->
@@ -936,79 +934,114 @@ function populateCountryDatalist() {
 
 // ═══════════════════════════════════════════
 //  BRINEWORKS LOOKUP TABLE
+//  Axes (from TEA JSON): capacity_tpy × location (proxy for T_air_C + rh_values)
+//  Additional axis: cf — applied as a modifier function (see applyBWCF)
+//  Reference axes:
+//    capacity_tpy: [5000,8000,15000,30000,60000,120000,250000,500000,750000,1000000]
+//    cf:           [0.30,0.45,0.60,0.75,0.85,0.90,0.95,1.00]
+//    T_air_C:      [-5,0,5,10,15,20,25,30,35,40]
+//    rh_values:    [0.80,0.60,0.40,0.20]
+//  Capacity interpolation is linear between adjacent (non-uniformly spaced) breakpoints.
+//  Values are indicative (placeholder) — to be replaced with actual TEA outputs.
 // ═══════════════════════════════════════════
 
+// Non-linear capacity axis breakpoints (t methanol/year)
+const BW_CAP_AXIS = [5000, 8000, 15000, 30000, 60000, 120000, 250000, 500000, 750000, 1000000];
+
+// Lookup table: BW_LOOKUP[location][capacity_tpy] → {capex €/kW, h2Rate kg-H₂/t-CO₂}
+// Reference condition: CF = 0.75 (see applyBWCF for CF adjustment)
+// CapEx scales approximately as C^0.7 (economies of scale for balance-of-plant systems)
+// H₂ co-production rate varies with T_air and relative humidity (location proxy)
 const BW_LOOKUP = {
-  Norway: {
-    0:   { capex: 350, h2Rate: 65 },
-    10:  { capex: 380, h2Rate: 70 },
-    20:  { capex: 420, h2Rate: 77 },
-    30:  { capex: 460, h2Rate: 84 },
-    40:  { capex: 510, h2Rate: 90 },
-    50:  { capex: 560, h2Rate: 96 },
-    60:  { capex: 620, h2Rate: 102 },
-    70:  { capex: 690, h2Rate: 107 },
-    80:  { capex: 760, h2Rate: 111 },
-    90:  { capex: 840, h2Rate: 114 },
-    100: { capex: 920, h2Rate: 117 },
+  Norway: {      // Cold, humid — lower T reduces CO₂ absorption kinetics slightly
+    5000:    { capex: 1543, h2Rate: 87 },
+    8000:    { capex: 1340, h2Rate: 88 },
+    15000:   { capex: 1109, h2Rate: 88 },
+    30000:   { capex:  901, h2Rate: 89 },
+    60000:   { capex:  732, h2Rate: 89 },
+    120000:  { capex:  594, h2Rate: 90 },
+    250000:  { capex:  477, h2Rate: 90 },
+    500000:  { capex:  388, h2Rate: 91 },
+    750000:  { capex:  343, h2Rate: 91 },
+    1000000: { capex:  315, h2Rate: 91 },
   },
-  Morocco: {
-    0:   { capex: 330, h2Rate: 68 },
-    10:  { capex: 360, h2Rate: 74 },
-    20:  { capex: 400, h2Rate: 81 },
-    30:  { capex: 435, h2Rate: 88 },
-    40:  { capex: 480, h2Rate: 95 },
-    50:  { capex: 530, h2Rate: 101 },
-    60:  { capex: 585, h2Rate: 107 },
-    70:  { capex: 650, h2Rate: 112 },
-    80:  { capex: 720, h2Rate: 116 },
-    90:  { capex: 795, h2Rate: 119 },
-    100: { capex: 875, h2Rate: 122 },
+  Morocco: {     // Hot, low-humidity — strong CO₂ kinetics, good H₂ rate
+    5000:    { capex: 1452, h2Rate: 92 },
+    8000:    { capex: 1261, h2Rate: 93 },
+    15000:   { capex: 1044, h2Rate: 93 },
+    30000:   { capex:  848, h2Rate: 94 },
+    60000:   { capex:  689, h2Rate: 94 },
+    120000:  { capex:  559, h2Rate: 95 },
+    250000:  { capex:  449, h2Rate: 95 },
+    500000:  { capex:  365, h2Rate: 96 },
+    750000:  { capex:  323, h2Rate: 96 },
+    1000000: { capex:  296, h2Rate: 96 },
   },
-  Spain: {
-    0:   { capex: 340, h2Rate: 67 },
-    10:  { capex: 370, h2Rate: 72 },
-    20:  { capex: 410, h2Rate: 79 },
-    30:  { capex: 448, h2Rate: 86 },
-    40:  { capex: 495, h2Rate: 92 },
-    50:  { capex: 545, h2Rate: 98 },
-    60:  { capex: 600, h2Rate: 104 },
-    70:  { capex: 668, h2Rate: 109 },
-    80:  { capex: 738, h2Rate: 114 },
-    90:  { capex: 815, h2Rate: 117 },
-    100: { capex: 895, h2Rate: 120 },
+  Spain: {       // Mediterranean — moderate T and humidity, balanced performance
+    5000:    { capex: 1497, h2Rate: 89 },
+    8000:    { capex: 1300, h2Rate: 90 },
+    15000:   { capex: 1077, h2Rate: 90 },
+    30000:   { capex:  875, h2Rate: 91 },
+    60000:   { capex:  711, h2Rate: 91 },
+    120000:  { capex:  577, h2Rate: 92 },
+    250000:  { capex:  463, h2Rate: 92 },
+    500000:  { capex:  376, h2Rate: 93 },
+    750000:  { capex:  333, h2Rate: 93 },
+    1000000: { capex:  305, h2Rate: 93 },
   },
-  Netherlands: {
-    0:   { capex: 360, h2Rate: 63 },
-    10:  { capex: 390, h2Rate: 68 },
-    20:  { capex: 430, h2Rate: 75 },
-    30:  { capex: 470, h2Rate: 82 },
-    40:  { capex: 520, h2Rate: 88 },
-    50:  { capex: 575, h2Rate: 94 },
-    60:  { capex: 635, h2Rate: 100 },
-    70:  { capex: 705, h2Rate: 105 },
-    80:  { capex: 778, h2Rate: 109 },
-    90:  { capex: 858, h2Rate: 112 },
-    100: { capex: 940, h2Rate: 115 },
+  Netherlands: { // Cool, moderate humidity — slight capex penalty vs Mediterranean
+    5000:    { capex: 1573, h2Rate: 85 },
+    8000:    { capex: 1366, h2Rate: 86 },
+    15000:   { capex: 1131, h2Rate: 86 },
+    30000:   { capex:  919, h2Rate: 87 },
+    60000:   { capex:  746, h2Rate: 87 },
+    120000:  { capex:  606, h2Rate: 88 },
+    250000:  { capex:  486, h2Rate: 88 },
+    500000:  { capex:  395, h2Rate: 89 },
+    750000:  { capex:  350, h2Rate: 89 },
+    1000000: { capex:  321, h2Rate: 89 },
   }
 };
 
-function lookupBW(location, elecPrice) {
-  const table = BW_LOOKUP[location] || BW_LOOKUP['Norway'];
-  const keys = Object.keys(table).map(Number).sort((a, b) => a - b);
-  if (elecPrice <= keys[0]) return { ...table[keys[0]] };
-  if (elecPrice >= keys[keys.length - 1]) return { ...table[keys[keys.length - 1]] };
-  let lo = keys[0], hi = keys[keys.length - 1];
-  for (let i = 0; i < keys.length - 1; i++) {
-    if (elecPrice >= keys[i] && elecPrice <= keys[i + 1]) {
-      lo = keys[i]; hi = keys[i + 1]; break;
-    }
-  }
-  const t = (elecPrice - lo) / (hi - lo);
+// CF modifier — reference CF = 0.75
+// Lower CF → higher CapEx (intermittency, conservative design; +15% at CF=0.30)
+// Higher CF → lower CapEx (continuous operation efficiencies; −8% at CF=1.0)
+// H₂ rate: mild benefit at higher CF (+5% across full CF range)
+function applyBWCF(data, cf) {
+  const REF = 0.75;
+  const cfCapexMod = cf <= REF
+    ? 1 + 0.15 * (REF - cf) / (REF - 0.30)
+    : 1 - 0.08 * (cf - REF) / (1.0 - REF);
+  const cfH2Mod = 1 + 0.05 * (cf - REF) / (1.0 - 0.30);
   return {
-    capex: table[lo].capex + t * (table[hi].capex - table[lo].capex),
-    h2Rate: table[lo].h2Rate + t * (table[hi].h2Rate - table[lo].h2Rate)
+    capex:  data.capex  * cfCapexMod,
+    h2Rate: data.h2Rate * cfH2Mod,
   };
+}
+
+// Interpolate BW lookup on the non-linear capacity axis, then apply CF modifier
+function lookupBW(location, capacity, cf) {
+  const table = BW_LOOKUP[location] || BW_LOOKUP['Spain'];
+  const axis  = BW_CAP_AXIS;
+
+  if (capacity <= axis[0])               return applyBWCF({ ...table[axis[0]] }, cf);
+  if (capacity >= axis[axis.length - 1]) return applyBWCF({ ...table[axis[axis.length - 1]] }, cf);
+
+  let lo = axis[0], hi = axis[1];
+  for (let i = 0; i < axis.length - 1; i++) {
+    if (capacity >= axis[i] && capacity <= axis[i + 1]) { lo = axis[i]; hi = axis[i + 1]; break; }
+  }
+  const t = (capacity - lo) / (hi - lo);
+  return applyBWCF({
+    capex:  table[lo].capex  + t * (table[hi].capex  - table[lo].capex),
+    h2Rate: table[lo].h2Rate + t * (table[hi].h2Rate - table[lo].h2Rate),
+  }, cf);
+}
+
+function fmtCap(v) {
+  if (v >= 1000000) return (v / 1000000).toFixed(1).replace(/\.0$/, '') + 'M t/yr';
+  if (v >= 1000)    return (v / 1000).toFixed(0) + 'k t/yr';
+  return v + ' t/yr';
 }
 
 // ═══════════════════════════════════════════
@@ -1047,9 +1080,30 @@ function syncParam(src, targetId) {
   if (el) el.value = src.value;
 }
 
+function snapCapFromSlider(idx) {
+  const cap = BW_CAP_AXIS[parseInt(idx)] || 250000;
+  document.getElementById('g-cap-n').value = cap;
+  document.getElementById('g-cap-label').textContent = fmtCap(cap);
+  recalc();
+}
+
+function snapCapFromNumber(val) {
+  const cap = Math.max(5000, Math.min(1000000, parseFloat(val) || 250000));
+  // Snap slider to nearest axis index
+  const idx = BW_CAP_AXIS.reduce((best, v, i) =>
+    Math.abs(v - cap) < Math.abs(BW_CAP_AXIS[best] - cap) ? i : best, 0);
+  document.getElementById('g-cap-r').value = idx;
+  document.getElementById('g-cap-label').textContent = fmtCap(cap);
+  recalc();
+}
+
+function getCap() {
+  return parseFloat(document.getElementById('g-cap-n')?.value) || 250000;
+}
+
 function getGlobals() {
   return {
-    scale: 200000,
+    scale: getCap(),
     elec: gv('g-elec'),
     cf: gv('g-cf') / 100,
     dr: gv('g-dr') / 100,
@@ -1099,8 +1153,8 @@ function calcScenario(sc, g) {
 
   } else if (sc.h2source === 'brineworks') {
     // ── Brineworks integrated system ──
-    const bwData = lookupBW(g.location, g.elec);
-    const bwCapex = bwData.capex;   // €/kW (TEA-optimized)
+    const bwData = lookupBW(g.location, g.scale, g.cf);
+    const bwCapex = bwData.capex;   // €/kW (TEA-optimized for capacity + CF + climate)
     const h2Rate = bwData.h2Rate;   // kg H2 per tonne CO2
 
     const h2FromBW = h2Rate * CO2_TONNES;  // kg H2 per tonne MeOH
@@ -1133,7 +1187,7 @@ function calcScenario(sc, g) {
   // H2 coverage info for BW
   let h2CoverageInfo = null;
   if (sc.h2source === 'brineworks') {
-    const bwData = lookupBW(g.location, g.elec);
+    const bwData = lookupBW(g.location, g.scale, g.cf);
     const h2FromBW = bwData.h2Rate * CO2_TONNES;
     h2CoverageInfo = Math.min(100, (h2FromBW / H2_PER_TONNE_MEOH) * 100);
   }
@@ -1364,7 +1418,7 @@ function renderScenarioBody(sc) {
 function updateBWLookupDisplay(sc, g) {
   const el = document.getElementById('bw-lookup-display-' + sc.id);
   if (!el) return;
-  const bwData = lookupBW(g.location, g.elec);
+  const bwData = lookupBW(g.location, g.scale, g.cf);
   const h2FromBW = bwData.h2Rate * CO2_TONNES;
   const pct = Math.min(100, (h2FromBW / H2_PER_TONNE_MEOH) * 100);
   const full = pct >= 100;
@@ -1378,7 +1432,7 @@ function updateBWLookupDisplay(sc, g) {
       <span>H₂ co-production</span>
       <strong>${bwData.h2Rate.toFixed(1)} kg/tCO₂</strong>
     </div>
-    <div class="bw-lookup-note">ⓘ TEA-optimized for selected location &amp; electricity price</div>
+    <div class="bw-lookup-note">ⓘ TEA-optimized for ${fmtCap(g.scale)} · CF ${(g.cf*100).toFixed(0)}%</div>
   `;
 
   // Coverage info (shown below the lookup display in the card)
@@ -1801,9 +1855,9 @@ function updateInsight(results, g) {
   let insightText = '';
 
   if (winner.sc.id === baseline.sc.id) {
-    insightText = `At €${g.elec}/MWh and ${(g.cf * 100).toFixed(0)}% capacity factor, <strong>${esc(winner.sc.name)}</strong> is the most competitive configuration at <strong>€${Math.round(winner.res.total)}/tonne</strong>. `;
+    insightText = `At €${g.elec}/MWh · ${fmtCap(g.scale)} · ${(g.cf * 100).toFixed(0)}% CF, <strong>${esc(winner.sc.name)}</strong> is the most competitive configuration at <strong>€${Math.round(winner.res.total)}/tonne</strong>. `;
   } else {
-    insightText = `At €${g.elec}/MWh and ${(g.cf * 100).toFixed(0)}% capacity factor, <strong>${esc(winner.sc.name)}</strong> delivers the cheapest methanol at <strong>€${Math.round(winner.res.total)}/tonne</strong> — <strong>€${Math.round(Math.abs(diff))} cheaper</strong> than ${esc(baseline.sc.name)} (${pct}% lower). `;
+    insightText = `At €${g.elec}/MWh · ${fmtCap(g.scale)} · ${(g.cf * 100).toFixed(0)}% CF, <strong>${esc(winner.sc.name)}</strong> delivers the cheapest methanol at <strong>€${Math.round(winner.res.total)}/tonne</strong> — <strong>€${Math.round(Math.abs(diff))} cheaper</strong> than ${esc(baseline.sc.name)} (${pct}% lower). `;
   }
 
   const baselineCO2Share = baseline.res.co2Share.toFixed(0);
