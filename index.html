@@ -149,6 +149,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 }
 .param-value-row select:focus { border-color: var(--accent); }
 .param-value-row select option { background: #1c1c28; color: var(--text); }
+#g-location-input:focus { border-color: var(--accent); }
 
 .scale-fixed-display {
   background: rgba(255,255,255,0.04);
@@ -603,16 +604,18 @@ tbody tr:last-child td.winner-col {
           Project Location
           <div class="tooltip-wrap">
             <div class="tooltip-icon">?</div>
-            <div class="tooltip-popup">Location determines Brineworks system TEA-optimized parameters (CapEx and H₂ co-production rate), which vary due to differences in ambient conditions, regulatory environment, and supply chain.</div>
+            <div class="tooltip-popup">Type any country to set the climate zone. Brineworks TEA parameters (CapEx &amp; H₂ co-production rate) are drawn from the nearest climate proxy (Norway / Morocco / Spain / Netherlands).</div>
           </div>
         </div>
-        <div class="param-value-row">
-          <select id="g-location" onchange="recalc()">
-            <option value="Norway">🇳🇴 Norway</option>
-            <option value="Morocco">🇲🇦 Morocco</option>
-            <option value="Spain">🇪🇸 Spain</option>
-            <option value="Netherlands">🇳🇱 Netherlands</option>
-          </select>
+        <div class="param-value-row" style="flex-direction:column;align-items:stretch;gap:6px">
+          <input type="text" id="g-location-input" list="country-datalist"
+            placeholder="Type a country…"
+            autocomplete="off"
+            style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:var(--text);font-size:13px;font-weight:600;padding:6px 10px;outline:none;transition:border-color 0.2s;font-family:inherit;width:100%">
+          <datalist id="country-datalist"></datalist>
+          <div id="proxy-indicator" class="coverage-info" style="margin-top:0;font-size:11px">
+            🌍 Using Norway climate data
+          </div>
         </div>
       </div>
 
@@ -755,6 +758,159 @@ tbody tr:last-child td.winner-col {
 
 <script>
 // ═══════════════════════════════════════════
+//  COUNTRY → CLIMATE PROXY MAPPING
+// ═══════════════════════════════════════════
+
+const COUNTRY_PROXY = {
+  // ── NORWAY PROXY (cold climates, high lat, temperate-cold) ──
+  "iceland": "Norway", "greenland": "Norway", "norway": "Norway",
+  "finland": "Norway", "sweden": "Norway", "russia": "Norway",
+  "canada": "Norway", "alaska": "Norway", "mongolia": "Norway",
+  "kazakhstan": "Norway", "kyrgyzstan": "Norway", "tajikistan": "Norway",
+  "estonia": "Norway", "latvia": "Norway", "lithuania": "Norway",
+  "belarus": "Norway", "ukraine": "Norway",
+  "new zealand south island": "Norway",
+  "patagonia": "Norway", "chile south": "Norway",
+  "tibet": "Norway", "bhutan": "Norway", "nepal": "Norway",
+
+  // ── MOROCCO PROXY (hot/warm, arid to semi-arid) ──
+  "morocco": "Morocco", "algeria": "Morocco", "tunisia": "Morocco",
+  "libya": "Morocco", "egypt": "Morocco", "sudan": "Morocco",
+  "ethiopia": "Morocco", "somalia": "Morocco", "eritrea": "Morocco",
+  "djibouti": "Morocco", "kenya": "Morocco", "tanzania": "Morocco",
+  "mozambique": "Morocco", "madagascar": "Morocco", "zimbabwe": "Morocco",
+  "botswana": "Morocco", "namibia": "Morocco", "zambia": "Morocco",
+  "angola": "Morocco", "mali": "Morocco", "niger": "Morocco",
+  "chad": "Morocco", "mauritania": "Morocco", "senegal": "Morocco",
+  "gambia": "Morocco", "guinea": "Morocco", "nigeria": "Morocco",
+  "ghana": "Morocco", "cameroon": "Morocco", "congo": "Morocco",
+  "saudi arabia": "Morocco", "yemen": "Morocco", "oman": "Morocco",
+  "uae": "Morocco", "united arab emirates": "Morocco", "qatar": "Morocco",
+  "kuwait": "Morocco", "bahrain": "Morocco", "iraq": "Morocco",
+  "jordan": "Morocco", "syria": "Morocco", "iran": "Morocco",
+  "pakistan": "Morocco", "india": "Morocco", "bangladesh": "Morocco",
+  "sri lanka": "Morocco", "myanmar": "Morocco", "thailand": "Morocco",
+  "cambodia": "Morocco", "laos": "Morocco", "vietnam": "Morocco",
+  "philippines": "Morocco", "indonesia": "Morocco", "malaysia": "Morocco",
+  "singapore": "Morocco", "brunei": "Morocco",
+  "australia": "Morocco", "papua new guinea": "Morocco",
+  "mexico": "Morocco", "cuba": "Morocco", "haiti": "Morocco",
+  "dominican republic": "Morocco", "puerto rico": "Morocco",
+  "guatemala": "Morocco", "honduras": "Morocco", "el salvador": "Morocco",
+  "nicaragua": "Morocco", "costa rica": "Morocco", "panama": "Morocco",
+  "colombia": "Morocco", "venezuela": "Morocco", "guyana": "Morocco",
+  "suriname": "Morocco", "brazil": "Morocco", "peru": "Morocco",
+  "bolivia": "Morocco", "ecuador": "Morocco", "paraguay": "Morocco",
+
+  // ── SPAIN PROXY (Mediterranean, warm-moderate) ──
+  "spain": "Spain", "portugal": "Spain", "italy": "Spain",
+  "greece": "Spain", "cyprus": "Spain", "malta": "Spain",
+  "israel": "Spain", "lebanon": "Spain", "palestine": "Spain",
+  "turkey": "Spain", "georgia": "Spain", "armenia": "Spain",
+  "azerbaijan": "Spain", "afghanistan": "Spain", "uzbekistan": "Spain",
+  "turkmenistan": "Spain",
+  "south africa": "Spain", "lesotho": "Spain", "eswatini": "Spain",
+  "chile": "Spain", "argentina": "Spain", "uruguay": "Spain",
+  "taiwan": "Spain", "south korea": "Spain", "korea": "Spain",
+  "japan": "Spain",
+  "new zealand": "Spain",
+  "california": "Spain", "florida": "Spain",
+  "croatia": "Spain", "albania": "Spain", "north macedonia": "Spain",
+  "montenegro": "Spain", "bosnia": "Spain", "serbia": "Spain",
+  "kosovo": "Spain", "bulgaria": "Spain", "romania": "Spain",
+  "moldova": "Spain", "libya coast": "Spain",
+  "canary islands": "Spain", "madeira": "Spain", "azores": "Spain",
+
+  // ── NETHERLANDS PROXY (cool temperate oceanic) ──
+  "netherlands": "Netherlands", "belgium": "Netherlands",
+  "united kingdom": "Netherlands", "uk": "Netherlands",
+  "england": "Netherlands", "scotland": "Netherlands",
+  "wales": "Netherlands", "ireland": "Netherlands",
+  "france": "Netherlands", "germany": "Netherlands",
+  "denmark": "Netherlands", "poland": "Netherlands",
+  "czech republic": "Netherlands", "czechia": "Netherlands",
+  "slovakia": "Netherlands", "hungary": "Netherlands",
+  "austria": "Netherlands", "switzerland": "Netherlands",
+  "luxembourg": "Netherlands", "liechtenstein": "Netherlands",
+  "slovenia": "Netherlands", "united states": "Netherlands",
+  "usa": "Netherlands", "china": "Netherlands",
+};
+
+// Keys to omit from datalist (sub-regions / abbreviations / duplicates)
+const DATALIST_SKIP = new Set([
+  "alaska", "california", "florida", "chile south", "patagonia",
+  "new zealand south island", "libya coast", "canary islands",
+  "madeira", "azores", "england", "scotland", "wales",
+  "tibet", "uk", "uae", "korea", "patagonia"
+]);
+
+function toTitleCase(str) {
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// State: resolved proxy for the current location input
+let currentLocationProxy = 'Norway';
+
+function getProxyForCountry(input) {
+  const key = input.trim().toLowerCase();
+  if (!key) return { proxy: 'Norway', matched: false, empty: true };
+  // Direct match
+  if (COUNTRY_PROXY[key]) return { proxy: COUNTRY_PROXY[key], matched: true };
+  // Partial match — find first key that contains the input or input contains the key
+  for (const [k, v] of Object.entries(COUNTRY_PROXY)) {
+    if (k.includes(key) || key.includes(k)) return { proxy: v, matched: true, matchedKey: k };
+  }
+  // Default
+  return { proxy: 'Spain', matched: false };
+}
+
+function updateProxyIndicator(inputVal) {
+  const result = getProxyForCountry(inputVal);
+  currentLocationProxy = result.proxy;
+
+  const pill = document.getElementById('proxy-indicator');
+  if (!pill) return;
+
+  if (result.empty) {
+    pill.className = 'coverage-info';
+    pill.textContent = '🌍 Type a country to set climate proxy';
+    return;
+  }
+
+  const proxyFlags = { Norway: '🇳🇴', Morocco: '🇲🇦', Spain: '🇪🇸', Netherlands: '🇳🇱' };
+  const flag = proxyFlags[result.proxy] || '🌍';
+
+  if (result.matched) {
+    const displayInput = toTitleCase(inputVal.trim());
+    const matchedProxy = result.proxy;
+    pill.className = 'coverage-info';
+    pill.textContent = `${flag} Using ${matchedProxy} climate data (closest match for ${displayInput})`;
+  } else {
+    pill.className = 'coverage-info coverage-warn';
+    pill.textContent = `⚠️ Unknown location — defaulting to Spain`;
+  }
+}
+
+function populateCountryDatalist() {
+  const datalist = document.getElementById('country-datalist');
+  if (!datalist) return;
+  const options = Object.keys(COUNTRY_PROXY)
+    .filter(k => !DATALIST_SKIP.has(k))
+    .map(toTitleCase)
+    .sort((a, b) => a.localeCompare(b));
+
+  // Deduplicate title-cased names
+  const seen = new Set();
+  options.forEach(name => {
+    if (seen.has(name)) return;
+    seen.add(name);
+    const opt = document.createElement('option');
+    opt.value = name;
+    datalist.appendChild(opt);
+  });
+}
+
+// ═══════════════════════════════════════════
 //  BRINEWORKS LOOKUP TABLE
 // ═══════════════════════════════════════════
 
@@ -874,7 +1030,7 @@ function getGlobals() {
     cf: gv('g-cf') / 100,
     dr: gv('g-dr') / 100,
     life: gv('g-life'),
-    location: document.getElementById('g-location')?.value || 'Norway',
+    location: currentLocationProxy,
   };
 }
 
@@ -1665,6 +1821,30 @@ function updateSensitivity(results, g) {
 // ═══════════════════════════════════════════
 
 function init() {
+  populateCountryDatalist();
+
+  // Set default country and proxy
+  const locationInput = document.getElementById('g-location-input');
+  if (locationInput) {
+    locationInput.value = 'Norway';
+    updateProxyIndicator('Norway');
+
+    // Debounce timer
+    let proxyDebounce = null;
+    locationInput.addEventListener('input', () => {
+      clearTimeout(proxyDebounce);
+      proxyDebounce = setTimeout(() => {
+        updateProxyIndicator(locationInput.value);
+        recalc();
+      }, 350);
+    });
+    locationInput.addEventListener('change', () => {
+      clearTimeout(proxyDebounce);
+      updateProxyIndicator(locationInput.value);
+      recalc();
+    });
+  }
+
   initCharts();
   DEFAULT_SCENARIOS.forEach(d => addScenario(d));
 }
