@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>e-Methanol Cost Calculator v2 — Scenario Comparison</title>
+<title>e-Fuel Cost Calculator v3 — Scenario Comparison</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,6 +18,7 @@
   --red: #FF453A;
   --amber: #FF9F0A;
   --purple: #BF5AF2;
+  --teal: #5AC8FA;
   --text: #ffffff;
   --text2: rgba(255,255,255,0.6);
   --text3: rgba(255,255,255,0.35);
@@ -86,7 +87,7 @@ main {
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   padding: 18px 24px;
-  margin-bottom: 28px;
+  margin-bottom: 16px;
 }
 .shared-params-title {
   font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
@@ -98,6 +99,7 @@ main {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
+
 .param-group { display: flex; flex-direction: column; gap: 6px; }
 .param-label {
   display: flex; align-items: center; gap: 5px;
@@ -131,6 +133,32 @@ main {
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 
+.param-value-row select {
+  flex: 1; background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; color: var(--text);
+  font-size: 13px; font-weight: 600;
+  padding: 5px 10px; outline: none; cursor: pointer;
+  transition: border-color 0.2s;
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  font-family: inherit;
+}
+.param-value-row select:focus { border-color: var(--accent); }
+.param-value-row select option { background: #1c1c28; color: var(--text); }
+
+.scale-fixed-display {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 6px 12px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  display: flex; align-items: center;
+  min-height: 34px;
+}
+
 /* ── TOOLTIP ── */
 .tooltip-wrap { position: relative; display: inline-flex; }
 .tooltip-icon {
@@ -148,7 +176,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   transform: translateX(-50%);
   background: #1c1c28; border: 1px solid rgba(255,255,255,0.15);
   border-radius: 10px; padding: 10px 12px;
-  width: 220px; font-size: 11.5px; line-height: 1.5;
+  width: 240px; font-size: 11.5px; line-height: 1.5;
   color: rgba(255,255,255,0.85);
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   pointer-events: none; opacity: 0; z-index: 999;
@@ -162,6 +190,44 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   border-top-color: #1c1c28;
 }
 .tooltip-wrap:hover .tooltip-popup { opacity: 1; }
+
+/* ── FUEL PATHWAY SELECTOR ── */
+.fuel-pathway-section {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.fuel-pathway-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--text3);
+  white-space: nowrap;
+}
+.fuel-pathway-toggles {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.fuel-pathway-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 16px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; border: 1px solid;
+  font-family: inherit;
+}
+.fuel-pathway-btn.active {
+  background: rgba(10,132,255,0.15); border-color: rgba(10,132,255,0.4); color: var(--accent);
+}
+.fuel-pathway-btn.coming-soon {
+  background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08);
+  color: var(--text3); cursor: not-allowed;
+}
+.fuel-soon-badge {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  background: rgba(255,159,10,0.15); color: var(--amber);
+  border-radius: 6px; padding: 1px 5px;
+  letter-spacing: 0.5px;
+}
 
 /* ── SCENARIOS SECTION ── */
 .scenarios-header {
@@ -295,7 +361,7 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   border: 1px solid rgba(48,209,88,0.2);
   border-radius: 8px; padding: 8px 10px;
   font-size: 11.5px; color: var(--green);
-  margin-top: 4px; margin-bottom: 10px;
+  margin-top: 4px;
   display: flex; align-items: center; gap: 6px;
 }
 .coverage-warn {
@@ -304,9 +370,79 @@ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   color: var(--amber);
 }
 
+/* ── BW LOOKUP DISPLAY ── */
+.bw-lookup-display {
+  background: rgba(48,209,88,0.06);
+  border: 1px solid rgba(48,209,88,0.2);
+  border-radius: 8px; padding: 10px 12px;
+}
+.bw-lookup-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 3px 0; font-size: 12px; color: var(--text2);
+}
+.bw-lookup-row strong { color: var(--green); font-size: 13px; }
+.bw-lookup-note {
+  font-size: 10.5px; color: var(--text3); margin-top: 8px;
+  padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── BW SOURCE LABELS ── */
+.bw-source-label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0; font-size: 11.5px; color: var(--text2);
+}
+.bw-source-badge {
+  background: rgba(48,209,88,0.12);
+  border: 1px solid rgba(48,209,88,0.25);
+  border-radius: 8px; padding: 3px 10px;
+  font-size: 11px; color: var(--green); font-weight: 600;
+  white-space: nowrap;
+}
+
 .section-divider {
   border: none; border-top: 1px solid rgba(255,255,255,0.06);
   margin: 12px 0;
+}
+
+/* ── HEADLINE METRICS ── */
+.headline-metrics {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+.headline-metrics-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 16px;
+}
+.headline-scenarios {
+  display: flex; gap: 0; flex-wrap: wrap;
+}
+.headline-scenario-item {
+  flex: 1; min-width: 140px;
+  text-align: center;
+  padding: 0 16px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.headline-scenario-item:last-child { border-right: none; }
+.headline-scenario-name {
+  font-size: 11px; color: var(--text2); margin-bottom: 8px;
+  font-weight: 500;
+}
+.headline-cost {
+  font-size: 36px; font-weight: 800; letter-spacing: -1.5px;
+  line-height: 1;
+}
+.headline-unit {
+  font-size: 11px; color: var(--text3); margin-top: 5px;
+  font-weight: 500;
+}
+.headline-winner-badge {
+  display: inline-block; margin-top: 6px;
+  background: rgba(48,209,88,0.12); border: 1px solid rgba(48,209,88,0.25);
+  border-radius: 8px; padding: 2px 8px;
+  font-size: 10px; font-weight: 700; color: var(--green);
 }
 
 /* ── RESULTS SECTION ── */
@@ -422,6 +558,9 @@ tbody tr:last-child td.winner-col {
   main { padding: 16px 12px 40px; }
   .shared-params { padding: 14px 16px; }
   .shared-params-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
+  .fuel-pathway-section { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .headline-scenario-item { min-width: 100px; }
+  .headline-cost { font-size: 26px; }
 }
 </style>
 </head>
@@ -430,7 +569,7 @@ tbody tr:last-child td.winner-col {
 <!-- HEADER -->
 <header>
   <div class="header-left">
-    <h1>e-Methanol Cost Calculator</h1>
+    <h1>e-Fuel Cost Calculator</h1>
     <p>Compare feedstock configurations for your eFuel project</p>
   </div>
   <div class="brineworks-badge">
@@ -446,34 +585,53 @@ tbody tr:last-child td.winner-col {
     <div class="shared-params-title">⚙️ Shared Parameters — apply to all scenarios</div>
     <div class="shared-params-grid">
 
+      <!-- Project Scale: Fixed -->
       <div class="param-group">
         <div class="param-label">
-          Project Scale (t/yr)
+          Project Scale
           <div class="tooltip-wrap">
             <div class="tooltip-icon">?</div>
-            <div class="tooltip-popup">Annual methanol production target. Larger projects benefit from economies of scale in the synthesis plant. Does not affect electrolyzer or CO2 unit costs in this model.</div>
+            <div class="tooltip-popup">Economies of scale not yet modelled. Fixed at 200,000 t/yr reference scale.</div>
+          </div>
+        </div>
+        <div class="scale-fixed-display">200,000 t/yr (fixed)</div>
+      </div>
+
+      <!-- Location -->
+      <div class="param-group">
+        <div class="param-label">
+          Project Location
+          <div class="tooltip-wrap">
+            <div class="tooltip-icon">?</div>
+            <div class="tooltip-popup">Location determines Brineworks system TEA-optimized parameters (CapEx and H₂ co-production rate), which vary due to differences in ambient conditions, regulatory environment, and supply chain.</div>
           </div>
         </div>
         <div class="param-value-row">
-          <input type="range" id="g-scale" min="1000" max="500000" step="1000" value="10000" oninput="syncParam(this,'g-scale-n');recalc()">
-          <input type="number" id="g-scale-n" min="1000" max="500000" value="10000" oninput="syncParam(this,'g-scale');recalc()">
+          <select id="g-location" onchange="recalc()">
+            <option value="Norway">🇳🇴 Norway</option>
+            <option value="Morocco">🇲🇦 Morocco</option>
+            <option value="Spain">🇪🇸 Spain</option>
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+          </select>
         </div>
       </div>
 
+      <!-- Electricity Price -->
       <div class="param-group">
         <div class="param-label">
           Electricity Price (€/MWh)
           <div class="tooltip-wrap">
             <div class="tooltip-icon">?</div>
-            <div class="tooltip-popup">Cost per MWh of input electricity. For solar-powered projects, use your LCOE. A lower electricity price is the single biggest lever in eFuel economics.</div>
+            <div class="tooltip-popup">Cost per MWh of input electricity. For solar-powered projects, use your LCOE. A lower electricity price is the single biggest lever in eFuel economics. Also drives Brineworks TEA-optimized parameters.</div>
           </div>
         </div>
         <div class="param-value-row">
-          <input type="range" id="g-elec" min="10" max="150" step="1" value="40" oninput="syncParam(this,'g-elec-n');recalc()">
-          <input type="number" id="g-elec-n" min="10" max="150" value="40" oninput="syncParam(this,'g-elec');recalc()">
+          <input type="range" id="g-elec" min="0" max="100" step="1" value="40" oninput="syncParam(this,'g-elec-n');recalc()">
+          <input type="number" id="g-elec-n" min="0" max="100" value="40" oninput="syncParam(this,'g-elec');recalc()">
         </div>
       </div>
 
+      <!-- Capacity Factor -->
       <div class="param-group">
         <div class="param-label">
           Capacity Factor (%)
@@ -488,9 +646,10 @@ tbody tr:last-child td.winner-col {
         </div>
       </div>
 
+      <!-- Discount Rate -->
       <div class="param-group">
         <div class="param-label">
-          Discount Rate (%)
+          Discount Rate / WACC (%)
           <div class="tooltip-wrap">
             <div class="tooltip-icon">?</div>
             <div class="tooltip-popup">Your cost of capital (WACC). This determines how heavily upfront CAPEX is weighted vs. ongoing OPEX. A 6% rate might apply for project finance; 10–12% for higher-risk early-stage projects.</div>
@@ -502,12 +661,13 @@ tbody tr:last-child td.winner-col {
         </div>
       </div>
 
+      <!-- Project Lifetime -->
       <div class="param-group">
         <div class="param-label">
           Project Lifetime (years)
           <div class="tooltip-wrap">
             <div class="tooltip-icon">?</div>
-            <div class="tooltip-popup">Economic lifetime over which CAPEX is depreciated. Longer lifetimes reduce the annual capital charge per tonne of methanol.</div>
+            <div class="tooltip-popup">Economic lifetime over which CAPEX is amortised. Used with WACC to compute the Capital Recovery Factor (CRF = WACC×(1+WACC)ⁿ / ((1+WACC)ⁿ−1)), which determines the annual capital charge per tonne. Longer lifetimes reduce cost per tonne.</div>
           </div>
         </div>
         <div class="param-value-row">
@@ -516,6 +676,22 @@ tbody tr:last-child td.winner-col {
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- FUEL PATHWAY SELECTOR -->
+  <div class="fuel-pathway-section">
+    <div class="fuel-pathway-label">⛽ Fuel Pathway</div>
+    <div class="fuel-pathway-toggles">
+      <button class="fuel-pathway-btn active">Methanol</button>
+      <div class="tooltip-wrap">
+        <button class="fuel-pathway-btn coming-soon">eSAF <span class="fuel-soon-badge">SOON</span></button>
+        <div class="tooltip-popup" style="bottom:34px;">Coming soon — stoichiometry and H₂/CO₂ ratios differ from methanol. SAF requires additional processing steps.</div>
+      </div>
+      <div class="tooltip-wrap">
+        <button class="fuel-pathway-btn coming-soon">eMethane <span class="fuel-soon-badge">SOON</span></button>
+        <div class="tooltip-popup" style="bottom:34px;">Coming soon — methane synthesis (Sabatier process) uses different H₂/CO₂ ratios and reactor economics.</div>
+      </div>
     </div>
   </div>
 
@@ -533,6 +709,14 @@ tbody tr:last-child td.winner-col {
   <div class="results-section">
     <div class="results-title">📈 Results</div>
 
+    <!-- Headline Metrics -->
+    <div class="headline-metrics" id="headline-metrics">
+      <div class="headline-metrics-title">💰 Total Cost (€/tonne methanol)</div>
+      <div class="headline-scenarios" id="headline-scenarios">
+        <!-- Updated by JS -->
+      </div>
+    </div>
+
     <!-- Stacked Bar Chart -->
     <div class="chart-card">
       <h3>Cost Breakdown by Component (€/tonne methanol)</h3>
@@ -541,12 +725,13 @@ tbody tr:last-child td.winner-col {
       </div>
     </div>
 
-    <!-- Insight + Table -->
+    <!-- Insight -->
     <div class="insight-card" id="insight-card">
       <h3>💡 Key Insight</h3>
       <p id="insight-text">Calculating...</p>
     </div>
 
+    <!-- Table -->
     <div class="chart-card">
       <div class="table-wrap">
         <table id="results-table">
@@ -559,7 +744,7 @@ tbody tr:last-child td.winner-col {
     <!-- Sensitivity Chart -->
     <div class="sensitivity-card">
       <h3>Cost Sensitivity to Electricity Price</h3>
-      <p>Total methanol cost (€/tonne) as electricity price varies from €10–150/MWh — all other inputs held constant.</p>
+      <p>Total methanol cost (€/tonne) as electricity price varies from €0–100/MWh — all other inputs held constant.</p>
       <div class="chart-wrapper" style="height:280px">
         <canvas id="sensitivity-chart"></canvas>
       </div>
@@ -570,31 +755,104 @@ tbody tr:last-child td.winner-col {
 
 <script>
 // ═══════════════════════════════════════════
+//  BRINEWORKS LOOKUP TABLE
+// ═══════════════════════════════════════════
+
+const BW_LOOKUP = {
+  Norway: {
+    0:   { capex: 350, h2Rate: 65 },
+    10:  { capex: 380, h2Rate: 70 },
+    20:  { capex: 420, h2Rate: 77 },
+    30:  { capex: 460, h2Rate: 84 },
+    40:  { capex: 510, h2Rate: 90 },
+    50:  { capex: 560, h2Rate: 96 },
+    60:  { capex: 620, h2Rate: 102 },
+    70:  { capex: 690, h2Rate: 107 },
+    80:  { capex: 760, h2Rate: 111 },
+    90:  { capex: 840, h2Rate: 114 },
+    100: { capex: 920, h2Rate: 117 },
+  },
+  Morocco: {
+    0:   { capex: 330, h2Rate: 68 },
+    10:  { capex: 360, h2Rate: 74 },
+    20:  { capex: 400, h2Rate: 81 },
+    30:  { capex: 435, h2Rate: 88 },
+    40:  { capex: 480, h2Rate: 95 },
+    50:  { capex: 530, h2Rate: 101 },
+    60:  { capex: 585, h2Rate: 107 },
+    70:  { capex: 650, h2Rate: 112 },
+    80:  { capex: 720, h2Rate: 116 },
+    90:  { capex: 795, h2Rate: 119 },
+    100: { capex: 875, h2Rate: 122 },
+  },
+  Spain: {
+    0:   { capex: 340, h2Rate: 67 },
+    10:  { capex: 370, h2Rate: 72 },
+    20:  { capex: 410, h2Rate: 79 },
+    30:  { capex: 448, h2Rate: 86 },
+    40:  { capex: 495, h2Rate: 92 },
+    50:  { capex: 545, h2Rate: 98 },
+    60:  { capex: 600, h2Rate: 104 },
+    70:  { capex: 668, h2Rate: 109 },
+    80:  { capex: 738, h2Rate: 114 },
+    90:  { capex: 815, h2Rate: 117 },
+    100: { capex: 895, h2Rate: 120 },
+  },
+  Netherlands: {
+    0:   { capex: 360, h2Rate: 63 },
+    10:  { capex: 390, h2Rate: 68 },
+    20:  { capex: 430, h2Rate: 75 },
+    30:  { capex: 470, h2Rate: 82 },
+    40:  { capex: 520, h2Rate: 88 },
+    50:  { capex: 575, h2Rate: 94 },
+    60:  { capex: 635, h2Rate: 100 },
+    70:  { capex: 705, h2Rate: 105 },
+    80:  { capex: 778, h2Rate: 109 },
+    90:  { capex: 858, h2Rate: 112 },
+    100: { capex: 940, h2Rate: 115 },
+  }
+};
+
+function lookupBW(location, elecPrice) {
+  const table = BW_LOOKUP[location] || BW_LOOKUP['Norway'];
+  const keys = Object.keys(table).map(Number).sort((a, b) => a - b);
+  if (elecPrice <= keys[0]) return { ...table[keys[0]] };
+  if (elecPrice >= keys[keys.length - 1]) return { ...table[keys[keys.length - 1]] };
+  let lo = keys[0], hi = keys[keys.length - 1];
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (elecPrice >= keys[i] && elecPrice <= keys[i + 1]) {
+      lo = keys[i]; hi = keys[i + 1]; break;
+    }
+  }
+  const t = (elecPrice - lo) / (hi - lo);
+  return {
+    capex: table[lo].capex + t * (table[hi].capex - table[lo].capex),
+    h2Rate: table[lo].h2Rate + t * (table[hi].h2Rate - table[lo].h2Rate)
+  };
+}
+
+// ═══════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════
 
 const COL_COLORS = { a: '#0A84FF', b: '#30D158', c: '#FF9F0A', d: '#BF5AF2' };
-const COL_KEYS = ['a','b','c','d'];
+const COL_KEYS = ['a', 'b', 'c', 'd'];
 let scenarioCounter = 0;
 
-// Scenario state array: [{id, colKey, name, h2source, elyzCapex, bwCapex, bwCoprodRate, topupCapex, co2source, co2price}, ...]
+// Scenario state: [{id, colKey, name, h2source, elyzCapex, topupCapex, co2source, co2price}, ...]
 let scenarios = [];
 
 const DEFAULT_SCENARIOS = [
   {
     name: 'A — Base Case',
-    h2source: 'pem', elyzCapex: 900, bwCapex: 600, bwCoprodRate: 90, topupCapex: 900,
+    h2source: 'pem', elyzCapex: 900,
     co2source: 'biogenic', co2price: 60
   },
   {
     name: 'B — Brineworks',
-    h2source: 'brineworks', elyzCapex: 900, bwCapex: 600, bwCoprodRate: 90, topupCapex: 900,
-    co2source: 'biogenic', co2price: 60
-  },
-  {
-    name: 'C — Electrolyzer + DAC',
-    h2source: 'alk', elyzCapex: 700, bwCapex: 600, bwCoprodRate: 90, topupCapex: 900,
-    co2source: 'dac3p', co2price: 350
+    h2source: 'brineworks',
+    co2source: 'brineworks_included',
+    topupCapex: 900
   }
 ];
 
@@ -603,6 +861,7 @@ const DEFAULT_SCENARIOS = [
 // ═══════════════════════════════════════════
 
 function gv(id) { return parseFloat(document.getElementById(id)?.value || 0); }
+
 function syncParam(src, targetId) {
   const el = document.getElementById(targetId);
   if (el) el.value = src.value;
@@ -610,100 +869,99 @@ function syncParam(src, targetId) {
 
 function getGlobals() {
   return {
-    scale:  gv('g-scale'),
-    elec:   gv('g-elec'),
-    cf:     gv('g-cf') / 100,
-    dr:     gv('g-dr') / 100,
-    life:   gv('g-life'),
+    scale: 200000,
+    elec: gv('g-elec'),
+    cf: gv('g-cf') / 100,
+    dr: gv('g-dr') / 100,
+    life: gv('g-life'),
+    location: document.getElementById('g-location')?.value || 'Norway',
   };
 }
 
 function crf(r, n) {
-  if (r === 0) return 1/n;
-  return r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+  if (r === 0) return 1 / n;
+  return r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
 }
 
 // ═══════════════════════════════════════════
 //  CALCULATION ENGINE
 // ═══════════════════════════════════════════
 
-const H2_PER_TONNE_MEOH = 187.5;   // kg
-const CO2_PER_TONNE_MEOH = 1375;   // kg = 1.375 tonne
-const CO2_TONNES = 1.375;
-const SPECIFIC_ENERGY = 49.8;      // kWh/kg H2
-const BW_CO2_YIELD = 0.0008;       // tonne CO2 per kWh
-const SYNTH_CAPEX = 500;           // €/tonne/yr
+const H2_PER_TONNE_MEOH = 187.5;  // kg H2 per tonne methanol
+const CO2_PER_TONNE_MEOH = 1375;  // kg CO2 per tonne methanol
+const CO2_TONNES = 1.375;         // tonne CO2 per tonne methanol
+const SPECIFIC_ENERGY = 49.8;     // kWh/kg H2
+const BW_CO2_YIELD = 0.0008;      // tonne CO2 per kWh electricity input
+const SYNTH_CAPEX = 500;          // €/tonne/yr (methanol synthesis)
+// BW electricity: 1 / BW_CO2_YIELD * CO2_TONNES = 1718.75 kWh/tonne MeOH
 
 function calcScenario(sc, g) {
   const R = crf(g.dr, g.life);
-  const flh = g.cf * 8760; // full-load hours/yr
+  const flh = g.cf * 8760; // full-load hours per year
 
-  // ── Synthesis cost (same all scenarios) ──
+  // Synthesis cost — same for all scenarios
   const synthCost = SYNTH_CAPEX * (R + 0.04);
 
-  let elecCost = 0, elyzCapexCost = 0, co2Cost = 0, bwCost = 0;
+  let elecCost = 0;
+  let elyzCapexCost = 0;  // standard electrolyzer (non-BW)
+  let bwCapexCost = 0;    // Brineworks system CAPEX+O&M
+  let topupCapexCost = 0; // top-up electrolyzer (BW scenarios, if H2 gap)
+  let co2Cost = 0;
   let lcoh = 0;
 
   if (sc.h2source === 'pem' || sc.h2source === 'alk') {
     // ── Standalone electrolyzer ──
     const prodRate = flh / SPECIFIC_ENERGY; // kg H2 per kW-yr
-    lcoh = (g.elec / 1000) * SPECIFIC_ENERGY + sc.elyzCapex * (R + 0.03) / prodRate;
-    const h2CostPerTonne = lcoh * H2_PER_TONNE_MEOH;
-
     elecCost = (g.elec / 1000) * SPECIFIC_ENERGY * H2_PER_TONNE_MEOH;
     elyzCapexCost = sc.elyzCapex * (R + 0.03) / prodRate * H2_PER_TONNE_MEOH;
+    lcoh = (g.elec / 1000) * SPECIFIC_ENERGY + sc.elyzCapex * (R + 0.03) / prodRate;
     co2Cost = getCO2Cost(sc, g);
 
   } else if (sc.h2source === 'brineworks') {
-    // ── Brineworks integrated ──
-    const h2FromBW = sc.bwCoprodRate * CO2_TONNES; // kg H2 per tonne MeOH
-    const h2Coverage = Math.min(h2FromBW / H2_PER_TONNE_MEOH, 1.0);
+    // ── Brineworks integrated system ──
+    const bwData = lookupBW(g.location, g.elec);
+    const bwCapex = bwData.capex;   // €/kW (TEA-optimized)
+    const h2Rate = bwData.h2Rate;   // kg H2 per tonne CO2
+
+    const h2FromBW = h2Rate * CO2_TONNES;  // kg H2 per tonne MeOH
     const remainingH2 = Math.max(0, H2_PER_TONNE_MEOH - h2FromBW);
 
-    // BW sized to produce 1.375 tonne CO2/tonne MeOH
-    const bwProdRate = flh * BW_CO2_YIELD; // tonne CO2 per kW-yr
-    const bwCapexPerTonne = sc.bwCapex * (R + 0.03) / bwProdRate * CO2_TONNES;
-    const bwElecPerTonne = (g.elec / 1000) * (CO2_PER_TONNE_MEOH / (BW_CO2_YIELD * 1000)); // kWh/tonne MeOH × €/kWh
-    // bw_electricity = elec/1000 × 1718.75 kWh
-    const bwElec = (g.elec / 1000) * 1718.75;
+    // BW system sized to produce 1.375 tonne CO2 per tonne MeOH
+    const bwProdRate = flh * BW_CO2_YIELD;  // tonne CO2 per kW-yr
+    bwCapexCost = bwCapex * (R + 0.03) / bwProdRate * CO2_TONNES;
+    const bwElec = (g.elec / 1000) * 1718.75;  // BW electricity: 1718.75 kWh/tonne MeOH
+    elecCost += bwElec;
 
-    bwCost = bwCapexPerTonne + bwElec;
-    elecCost = bwElec;
-    elyzCapexCost = bwCapexPerTonne;
-
-    // Top-up electrolyzer for remaining H2
+    // Top-up electrolyzer for remaining H2 gap
     if (remainingH2 > 0) {
       const prodRate = flh / SPECIFIC_ENERGY;
-      const topupLCOH = (g.elec / 1000) * SPECIFIC_ENERGY + sc.topupCapex * (R + 0.03) / prodRate;
+      topupCapexCost = sc.topupCapex * (R + 0.03) / prodRate * remainingH2;
       const topupElec = (g.elec / 1000) * SPECIFIC_ENERGY * remainingH2;
-      const topupCapexCost = sc.topupCapex * (R + 0.03) / prodRate * remainingH2;
       elecCost += topupElec;
-      elyzCapexCost += topupCapexCost;
     }
 
     co2Cost = 0; // CO2 covered by BW
-    lcoh = elecCost / H2_PER_TONNE_MEOH; // rough equiv
+    lcoh = elecCost / H2_PER_TONNE_MEOH; // rough equivalent
   }
 
-  const total = elecCost + elyzCapexCost + co2Cost + synthCost;
+  const total = elecCost + elyzCapexCost + bwCapexCost + topupCapexCost + co2Cost + synthCost;
 
-  // Cost shares
-  const elecShare = total > 0 ? (elecCost / total) * 100 : 0;
-  const co2Share  = total > 0 ? ((co2Cost) / total) * 100 : 0;
-  const capexShare= total > 0 ? ((elyzCapexCost + synthCost) / total) * 100 : 0;
+  const elecShare  = total > 0 ? (elecCost / total) * 100 : 0;
+  const co2Share   = total > 0 ? (co2Cost / total) * 100 : 0;
+  const capexShare = total > 0 ? ((elyzCapexCost + bwCapexCost + topupCapexCost + synthCost) / total) * 100 : 0;
 
   // H2 coverage info for BW
   let h2CoverageInfo = null;
   if (sc.h2source === 'brineworks') {
-    const h2FromBW = sc.bwCoprodRate * CO2_TONNES;
-    const pct = Math.min(100, (h2FromBW / H2_PER_TONNE_MEOH) * 100);
-    h2CoverageInfo = pct;
+    const bwData = lookupBW(g.location, g.elec);
+    const h2FromBW = bwData.h2Rate * CO2_TONNES;
+    h2CoverageInfo = Math.min(100, (h2FromBW / H2_PER_TONNE_MEOH) * 100);
   }
 
   return {
-    elecCost, elyzCapexCost, co2Cost, synthCost,
-    total, lcoh, elecShare, co2Share, capexShare,
-    h2CoverageInfo
+    elecCost, elyzCapexCost, bwCapexCost, topupCapexCost,
+    co2Cost, synthCost, total, lcoh,
+    elecShare, co2Share, capexShare, h2CoverageInfo
   };
 }
 
@@ -712,7 +970,6 @@ function getCO2Cost(sc, g) {
   return sc.co2price * CO2_TONNES;
 }
 
-// Sensitivity: sweep elec price
 function calcSensitivity(sc, g, elecPrices) {
   return elecPrices.map(ep => {
     const gg = { ...g, elec: ep };
@@ -735,10 +992,9 @@ function addScenario(defaults) {
   const sc = Object.assign({
     id, colKey,
     name: 'Scenario ' + String.fromCharCode(65 + scenarios.length),
-    h2source: 'pem', elyzCapex: 900, bwCapex: 600,
-    bwCoprodRate: 90, topupCapex: 900,
+    h2source: 'pem', elyzCapex: 900, topupCapex: 900,
     co2source: 'biogenic', co2price: 60
-  }, defaults || {});
+  }, defaults || {}, { id, colKey });
   scenarios.push(sc);
   renderScenarioCard(sc);
   updateAddBtn();
@@ -748,7 +1004,6 @@ function addScenario(defaults) {
 function removeScenario(id) {
   if (scenarios.length <= 1) return;
   scenarios = scenarios.filter(s => s.id !== id);
-  // Re-assign colKeys
   scenarios.forEach((s, i) => s.colKey = COL_KEYS[i % COL_KEYS.length]);
   document.getElementById('scenarios-grid').innerHTML = '';
   scenarios.forEach(s => renderScenarioCard(s));
@@ -788,142 +1043,115 @@ function renderScenarioCard(sc) {
     </div>
   `;
   grid.appendChild(card);
+
+  // If BW, seed the lookup display immediately
+  if (isBW) {
+    const g = getGlobals();
+    updateBWLookupDisplay(sc, g);
+  }
 }
 
 function renderScenarioBody(sc) {
   const isBW = sc.h2source === 'brineworks';
 
-  // H2 coverage calculation
-  let coverageHtml = '';
-  if (isBW) {
-    const g = getGlobals();
-    const h2FromBW = sc.bwCoprodRate * CO2_TONNES;
-    const pct = Math.min(100, (h2FromBW / H2_PER_TONNE_MEOH) * 100).toFixed(0);
-    const full = parseFloat(pct) >= 100;
-    coverageHtml = `
-      <div class="coverage-info ${full ? '' : 'coverage-warn'}" id="coverage-${sc.id}">
-        ${full ? '✓' : '⚡'} Covers <strong>${pct}%</strong> of H₂ needs
-        ${full ? '— fully covered' : '— top-up electrolyzer needed'}
-      </div>
-    `;
-  }
-
-  // Top-up CAPEX input (only if BW and <100%)
-  let topupHtml = '';
-  if (isBW) {
-    const h2FromBW = sc.bwCoprodRate * CO2_TONNES;
-    const pct = (h2FromBW / H2_PER_TONNE_MEOH) * 100;
-    if (pct < 100) {
-      topupHtml = `
-        <div class="input-group" id="topup-group-${sc.id}">
-          <label>
-            Top-up Electrolyzer CAPEX (€/kW)
-            <div class="tooltip-wrap">
-              <div class="tooltip-icon">?</div>
-              <div class="tooltip-popup">PEM electrolyzer sized to cover the H₂ not supplied by the Brineworks system. All-in installed cost including balance of plant.</div>
-            </div>
-          </label>
-          <div class="sync-row">
-            <input type="range" id="sc-topupCapex-r-${sc.id}" min="300" max="2000" step="50"
-              value="${sc.topupCapex}" oninput="updateSc(${sc.id},'topupCapex',this.value,'sc-topupCapex-n-${sc.id}')">
-            <input type="number" id="sc-topupCapex-n-${sc.id}" min="300" max="2000" step="50"
-              value="${sc.topupCapex}" oninput="updateSc(${sc.id},'topupCapex',this.value,'sc-topupCapex-r-${sc.id}')">
-          </div>
+  // Top-up CAPEX (always rendered for BW; show/hide dynamically)
+  const topupHtml = isBW ? `
+    <div class="input-group" id="topup-group-${sc.id}" style="display:none">
+      <label>
+        Top-up Electrolyzer CAPEX (€/kW)
+        <div class="tooltip-wrap">
+          <div class="tooltip-icon">?</div>
+          <div class="tooltip-popup">PEM electrolyzer sized to cover the H₂ not supplied by the Brineworks system. All-in installed cost including balance of plant.</div>
         </div>
-      `;
-    }
-  }
+      </label>
+      <div class="sync-row">
+        <input type="range" id="sc-topupCapex-r-${sc.id}" min="300" max="2000" step="50"
+          value="${sc.topupCapex || 900}"
+          oninput="updateSc(${sc.id},'topupCapex',this.value,'sc-topupCapex-n-${sc.id}')">
+        <input type="number" id="sc-topupCapex-n-${sc.id}" min="300" max="2000" step="50"
+          value="${sc.topupCapex || 900}"
+          oninput="updateSc(${sc.id},'topupCapex',this.value,'sc-topupCapex-r-${sc.id}')">
+      </div>
+    </div>
+  ` : '';
 
-  // CO2 source section
   const co2Hidden = isBW ? 'style="display:none"' : '';
 
-  // Electrolyzer CAPEX label and tooltip
-  let elyzLabel = 'Electrolyzer CAPEX (€/kW)';
+  let elyzLabel = sc.h2source === 'alk'
+    ? 'Alkaline Electrolyzer CAPEX (€/kW)'
+    : 'PEM Electrolyzer CAPEX (€/kW)';
   let elyzTooltip = sc.h2source === 'pem'
     ? 'All-in installed cost for a PEM electrolyzer system (stack + balance of plant + installation). Current range: €700–1,500/kW. Expected to fall to €300–600/kW by 2030 as manufacturing scales.'
-    : sc.h2source === 'alk'
-    ? 'All-in installed cost for an alkaline electrolyzer system. More mature technology, lower cost than PEM today (€500–1,000/kW) but less suited to intermittent operation.'
-    : '';
+    : 'All-in installed cost for an alkaline electrolyzer system. More mature technology, lower cost than PEM today (€500–1,000/kW) but less suited to intermittent operation.';
 
   return `
     <!-- H2 Source -->
     <div class="input-group">
       <label>H₂ Source</label>
       <select id="sc-h2source-${sc.id}" onchange="updateSc(${sc.id},'h2source',this.value,null)">
-        <option value="pem"        ${sc.h2source==='pem'        ?'selected':''}>PEM Electrolyzer</option>
-        <option value="alk"        ${sc.h2source==='alk'        ?'selected':''}>Alkaline Electrolyzer</option>
-        <option value="brineworks" ${sc.h2source==='brineworks' ?'selected':''}>Brineworks (co-production)</option>
+        <option value="pem"        ${sc.h2source === 'pem'        ? 'selected' : ''}>PEM Electrolyzer</option>
+        <option value="alk"        ${sc.h2source === 'alk'        ? 'selected' : ''}>Alkaline Electrolyzer</option>
+        <option value="brineworks" ${sc.h2source === 'brineworks' ? 'selected' : ''}>Brineworks (co-production)</option>
       </select>
     </div>
 
-    <!-- Electrolyzer CAPEX (non-BW) -->
+    <!-- Non-BW: Electrolyzer CAPEX -->
     <div class="input-group" id="elyz-group-${sc.id}" ${isBW ? 'style="display:none"' : ''}>
       <label>
-        ${isBW ? 'Electrolyzer CAPEX' : (sc.h2source === 'alk' ? 'Alkaline Electrolyzer CAPEX (€/kW)' : 'PEM Electrolyzer CAPEX (€/kW)')}
+        ${elyzLabel}
         <div class="tooltip-wrap">
           <div class="tooltip-icon">?</div>
-          <div class="tooltip-popup">${isBW ? '' : elyzTooltip}</div>
+          <div class="tooltip-popup">${elyzTooltip}</div>
         </div>
       </label>
       <div class="sync-row">
         <input type="range" id="sc-elyzCapex-r-${sc.id}" min="300" max="2000" step="50"
-          value="${sc.elyzCapex}" oninput="updateSc(${sc.id},'elyzCapex',this.value,'sc-elyzCapex-n-${sc.id}')">
+          value="${sc.elyzCapex || 900}"
+          oninput="updateSc(${sc.id},'elyzCapex',this.value,'sc-elyzCapex-n-${sc.id}')">
         <input type="number" id="sc-elyzCapex-n-${sc.id}" min="300" max="2000" step="50"
-          value="${sc.elyzCapex}" oninput="updateSc(${sc.id},'elyzCapex',this.value,'sc-elyzCapex-r-${sc.id}')">
+          value="${sc.elyzCapex || 900}"
+          oninput="updateSc(${sc.id},'elyzCapex',this.value,'sc-elyzCapex-r-${sc.id}')">
       </div>
     </div>
 
-    <!-- Brineworks CAPEX -->
-    <div class="input-group" id="bw-capex-group-${sc.id}" ${!isBW ? 'style="display:none"' : ''}>
+    <!-- BW: TEA-Optimized Lookup Display -->
+    <div class="input-group" id="bw-lookup-group-${sc.id}" ${!isBW ? 'style="display:none"' : ''}>
       <label>
-        Brineworks System CAPEX (€/kW)
+        Brineworks System Parameters
         <div class="tooltip-wrap">
-          <div class="tooltip-icon">?</div>
-          <div class="tooltip-popup">All-in cost of the Brineworks integrated DAC + H₂ co-production system. One system replaces both the electrolyzer AND the CO₂ supply contract. Uses abundant materials (no precious metals) and is designed for intermittent solar/wind operation.</div>
+          <div class="tooltip-icon">ⓘ</div>
+          <div class="tooltip-popup">CapEx and H₂ co-production rate are derived from Brineworks' TEA models, optimized for the selected location and electricity price. These are NOT free inputs — they reflect the optimal operating point for each condition.</div>
         </div>
       </label>
-      <div class="sync-row">
-        <input type="range" id="sc-bwCapex-r-${sc.id}" min="200" max="2000" step="50"
-          value="${sc.bwCapex}" oninput="updateSc(${sc.id},'bwCapex',this.value,'sc-bwCapex-n-${sc.id}')">
-        <input type="number" id="sc-bwCapex-n-${sc.id}" min="200" max="2000" step="50"
-          value="${sc.bwCapex}" oninput="updateSc(${sc.id},'bwCapex',this.value,'sc-bwCapex-r-${sc.id}')">
+      <div id="bw-lookup-display-${sc.id}" class="bw-lookup-display">
+        <div class="bw-lookup-row"><span>Loading…</span></div>
       </div>
+      <div id="bw-coverage-${sc.id}" class="coverage-info" style="margin-top:8px;display:none"></div>
     </div>
 
-    <!-- BW Co-production rate -->
-    <div class="input-group" id="bw-coprod-group-${sc.id}" ${!isBW ? 'style="display:none"' : ''}>
-      <label>
-        H₂ Co-production Rate (kg H₂/t CO₂)
-        <div class="tooltip-wrap">
-          <div class="tooltip-icon">?</div>
-          <div class="tooltip-popup">Brineworks' electrolyzer produces H₂ at the cathode as a co-product of the DAC process. This input sets how much H₂ is produced per tonne of CO₂ captured. Higher ratios mean more of your methanol's H₂ needs are met by the integrated system, reducing reliance on separate electrolyzers.</div>
-        </div>
-      </label>
-      <div class="sync-row">
-        <input type="range" id="sc-bwCoprodRate-r-${sc.id}" min="20" max="200" step="5"
-          value="${sc.bwCoprodRate}" oninput="updateSc(${sc.id},'bwCoprodRate',this.value,'sc-bwCoprodRate-n-${sc.id}')">
-        <input type="number" id="sc-bwCoprodRate-n-${sc.id}" min="20" max="200" step="5"
-          value="${sc.bwCoprodRate}" oninput="updateSc(${sc.id},'bwCoprodRate',this.value,'sc-bwCoprodRate-r-${sc.id}')">
+    <!-- BW: H2 source read-only label -->
+    <div id="bw-h2-info-${sc.id}" ${!isBW ? 'style="display:none"' : ''}>
+      <div class="bw-source-label">
+        <span>Hydrogen Source:</span>
+        <span class="bw-source-badge">⚡ Brineworks + top-up electrolyzer</span>
       </div>
-      ${coverageHtml}
     </div>
 
     ${topupHtml}
 
     <hr class="section-divider">
 
-    <!-- CO2 Source -->
+    <!-- Non-BW: CO2 Source -->
     <div id="co2-section-${sc.id}" ${co2Hidden}>
       <div class="input-group">
         <label>CO₂ Source</label>
         <select id="sc-co2source-${sc.id}" onchange="updateSc(${sc.id},'co2source',this.value,null)">
-          <option value="biogenic" ${sc.co2source==='biogenic' ?'selected':''}>Biogenic CO₂</option>
-          <option value="pointsource" ${sc.co2source==='pointsource' ?'selected':''}>Point-source Industrial CO₂</option>
-          <option value="dac3p"    ${sc.co2source==='dac3p'    ?'selected':''}>Third-party DAC</option>
-          <option value="bwdac"    ${sc.co2source==='bwdac'    ?'selected':''}>Brineworks DAC</option>
+          <option value="biogenic"    ${sc.co2source === 'biogenic'    ? 'selected' : ''}>Biogenic CO₂</option>
+          <option value="pointsource" ${sc.co2source === 'pointsource' ? 'selected' : ''}>Point-source Industrial CO₂</option>
+          <option value="dac3p"       ${sc.co2source === 'dac3p'       ? 'selected' : ''}>Third-party DAC</option>
+          <option value="bwdac"       ${sc.co2source === 'bwdac'       ? 'selected' : ''}>Brineworks DAC</option>
         </select>
       </div>
-
       <div class="input-group">
         <label>
           ${getCO2Label(sc.co2source)}
@@ -934,24 +1162,62 @@ function renderScenarioBody(sc) {
         </label>
         <div class="sync-row">
           <input type="range" id="sc-co2price-r-${sc.id}" min="0" max="600" step="5"
-            value="${sc.co2price}" oninput="updateSc(${sc.id},'co2price',this.value,'sc-co2price-n-${sc.id}')">
+            value="${sc.co2price || 60}"
+            oninput="updateSc(${sc.id},'co2price',this.value,'sc-co2price-n-${sc.id}')">
           <input type="number" id="sc-co2price-n-${sc.id}" min="0" max="600" step="5"
-            value="${sc.co2price}" oninput="updateSc(${sc.id},'co2price',this.value,'sc-co2price-r-${sc.id}')">
+            value="${sc.co2price || 60}"
+            oninput="updateSc(${sc.id},'co2price',this.value,'sc-co2price-r-${sc.id}')">
         </div>
       </div>
     </div>
 
+    <!-- BW: CO2 bundled note -->
     <div id="co2-bw-note-${sc.id}" ${!isBW ? 'style="display:none"' : ''}>
-      <div class="coverage-info" style="margin-top:4px">
-        ✓ CO₂ supplied by Brineworks system — included in system economics
+      <div class="bw-source-label" style="margin-top:4px">
+        <span>CO₂ Source:</span>
+        <span class="bw-source-badge">✓ Brineworks — included</span>
       </div>
     </div>
   `;
 }
 
+function updateBWLookupDisplay(sc, g) {
+  const el = document.getElementById('bw-lookup-display-' + sc.id);
+  if (!el) return;
+  const bwData = lookupBW(g.location, g.elec);
+  const h2FromBW = bwData.h2Rate * CO2_TONNES;
+  const pct = Math.min(100, (h2FromBW / H2_PER_TONNE_MEOH) * 100);
+  const full = pct >= 100;
+
+  el.innerHTML = `
+    <div class="bw-lookup-row">
+      <span>Optimized CapEx</span>
+      <strong>€${Math.round(bwData.capex)}/kW</strong>
+    </div>
+    <div class="bw-lookup-row">
+      <span>H₂ co-production</span>
+      <strong>${bwData.h2Rate.toFixed(1)} kg/tCO₂</strong>
+    </div>
+    <div class="bw-lookup-note">ⓘ TEA-optimized for selected location &amp; electricity price</div>
+  `;
+
+  // Coverage info (shown below the lookup display in the card)
+  const coverageEl = document.getElementById('bw-coverage-' + sc.id);
+  if (coverageEl) {
+    coverageEl.className = 'coverage-info ' + (full ? '' : 'coverage-warn');
+    coverageEl.style.display = 'flex';
+    coverageEl.innerHTML = `${full ? '✓' : '⚡'} Covers <strong>${pct.toFixed(0)}%</strong> of H₂ needs ${full ? '— fully covered' : '— top-up electrolyzer needed'}`;
+  }
+
+  // Show/hide top-up capex group
+  const topupGroup = document.getElementById('topup-group-' + sc.id);
+  if (topupGroup) {
+    topupGroup.style.display = full ? 'none' : 'block';
+  }
+}
+
 function getCO2Label(source) {
-  const map = { biogenic: 'CO₂ Price (€/tonne)', pointsource: 'CO₂ Price (€/tonne)', dac3p: 'CO₂ Price (€/tonne)', bwdac: 'Brineworks CO₂ Price (€/tonne)' };
-  return map[source] || 'CO₂ Price (€/tonne)';
+  return 'CO₂ Price (€/tonne)';
 }
 
 function getCO2Tooltip(source) {
@@ -961,11 +1227,11 @@ function getCO2Tooltip(source) {
     dac3p: 'Price of CO₂ captured from the atmosphere using established DAC technologies (e.g., solid sorbent, liquid solvent). Currently €200–600/tonne. Location-flexible. Brineworks targets sub-€100/tonne.',
     bwdac: 'Price of CO₂ from the Brineworks integrated system. Brineworks targets <$200/tonne today and <$100/tonne by 2030. When using Brineworks as H₂ source, CO₂ is automatically included in the system economics.'
   };
-  return map[source] || '';
+  return map[source] || 'CO₂ price per tonne.';
 }
 
 function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function updateScenarioName(id, val) {
@@ -978,7 +1244,7 @@ function updateSc(id, field, value, syncTargetId) {
   const sc = scenarios.find(s => s.id === id);
   if (!sc) return;
 
-  const numFields = ['elyzCapex','bwCapex','bwCoprodRate','topupCapex','co2price'];
+  const numFields = ['elyzCapex', 'topupCapex', 'co2price'];
   sc[field] = numFields.includes(field) ? parseFloat(value) : value;
 
   if (syncTargetId) {
@@ -986,64 +1252,33 @@ function updateSc(id, field, value, syncTargetId) {
     if (el) el.value = value;
   }
 
-  // If h2source changed, re-render the whole card body
+  // Re-render body if h2source changed
   if (field === 'h2source') {
-    // Set defaults for new source
     if (value === 'pem') sc.elyzCapex = 900;
     if (value === 'alk') sc.elyzCapex = 700;
-    // Re-render body
+    if (value === 'brineworks') sc.co2source = 'brineworks_included';
     const body = document.getElementById('sc-body-' + id);
     if (body) body.innerHTML = renderScenarioBody(sc);
+    // Seed BW display if needed
+    if (value === 'brineworks') {
+      const g = getGlobals();
+      updateBWLookupDisplay(sc, g);
+    }
     // Update badge
     const badge = document.getElementById('bw-badge-' + id);
     if (badge) badge.innerHTML = value === 'brineworks' ? '<span class="bw-badge">BRINEWORKS</span>' : '';
-    // Update card top border color
+    // Card shadow
     const card = document.getElementById('sc-card-' + id);
-    if (card) {
-      // BW gets green glow
-      if (value === 'brineworks') {
-        card.style.boxShadow = '0 0 24px rgba(48,209,88,0.12)';
-      } else {
-        card.style.boxShadow = '';
-      }
-    }
+    if (card) card.style.boxShadow = value === 'brineworks' ? '0 0 24px rgba(48,209,88,0.12)' : '';
   }
 
-  // If co2source changed, update label/tooltip
+  // Re-render body if co2source changed (to update label/tooltip)
   if (field === 'co2source') {
     const body = document.getElementById('sc-body-' + id);
     if (body) body.innerHTML = renderScenarioBody(sc);
   }
 
-  // Update coverage info if coprod rate changed
-  if (field === 'bwCoprodRate') {
-    updateCoverageInfo(sc);
-    // Check if we need topup group
-    const h2FromBW = sc.bwCoprodRate * CO2_TONNES;
-    const pct = (h2FromBW / H2_PER_TONNE_MEOH) * 100;
-    const topupGroup = document.getElementById('topup-group-' + id);
-    if (!topupGroup && pct < 100) {
-      // Re-render
-      const body = document.getElementById('sc-body-' + id);
-      if (body) body.innerHTML = renderScenarioBody(sc);
-    } else if (topupGroup && pct >= 100) {
-      topupGroup.style.display = 'none';
-    } else if (topupGroup && pct < 100) {
-      topupGroup.style.display = 'block';
-    }
-  }
-
   recalc();
-}
-
-function updateCoverageInfo(sc) {
-  const el = document.getElementById('coverage-' + sc.id);
-  if (!el) return;
-  const h2FromBW = sc.bwCoprodRate * CO2_TONNES;
-  const pct = Math.min(100, (h2FromBW / H2_PER_TONNE_MEOH) * 100).toFixed(0);
-  const full = parseFloat(pct) >= 100;
-  el.className = 'coverage-info ' + (full ? '' : 'coverage-warn');
-  el.innerHTML = `${full ? '✓' : '⚡'} Covers <strong>${pct}%</strong> of H₂ needs ${full ? '— fully covered' : '— top-up electrolyzer needed'}`;
 }
 
 // ═══════════════════════════════════════════
@@ -1056,6 +1291,8 @@ let sensChart = null;
 const COMP_COLORS = {
   electricity: '#0A84FF',
   electrolyzer: '#5E5CE6',
+  bw_system: '#30D158',
+  topup: '#5AC8FA',
   co2: '#FF9F0A',
   synthesis: '#48484A'
 };
@@ -1072,21 +1309,25 @@ function initCharts() {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 }, padding: 14, boxWidth: 12 }
+          labels: {
+            color: 'rgba(255,255,255,0.6)', font: { size: 11 }, padding: 14, boxWidth: 12,
+            filter: item => item.dataset && item.dataset.data &&
+              item.dataset.data.some(v => v > 0)
+          }
         },
         tooltip: {
           backgroundColor: '#1c1c28', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
           titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.7)',
           callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: €${ctx.raw.toFixed(0)}/t`
+            label: ctx => ctx.raw > 0 ? ` ${ctx.dataset.label}: €${ctx.raw.toFixed(0)}/t` : null,
+            filter: item => item.raw > 0
           }
         }
       },
       scales: {
         x: {
           stacked: true,
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 11 },
-            callback: v => '€' + v },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 11 }, callback: v => '€' + v },
           grid: { color: 'rgba(255,255,255,0.06)' },
           border: { color: 'rgba(255,255,255,0.1)' }
         },
@@ -1102,7 +1343,6 @@ function initCharts() {
       id: 'totalLabels',
       afterDatasetsDraw(chart) {
         const { ctx, data, scales: { x, y } } = chart;
-        // Calculate totals per bar
         const totals = data.labels.map((_, i) =>
           chart.data.datasets.reduce((sum, ds) => sum + (ds.data[i] || 0), 0)
         );
@@ -1138,7 +1378,7 @@ function initCharts() {
         ctx.fillStyle = 'rgba(255,69,58,0.7)';
         ctx.font = '10px -apple-system, sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText('Fossil methanol benchmark €350/t', benchmarkX + 4, chartArea.top + 14);
+        ctx.fillText('Fossil methanol ~€350/t', benchmarkX + 4, chartArea.top + 14);
         ctx.restore();
       }
     }]
@@ -1159,16 +1399,15 @@ function initCharts() {
         tooltip: {
           backgroundColor: '#1c1c28', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
           titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.7)',
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: €${ctx.raw.toFixed(0)}/t`
-          }
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: €${ctx.raw.toFixed(0)}/t` }
         }
       },
       scales: {
         x: {
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 11 },
-            callback: (v, i, ticks) => {
-              const label = sensChart.data.labels[i];
+          ticks: {
+            color: 'rgba(255,255,255,0.4)', font: { size: 11 },
+            callback: (v, i) => {
+              const label = sensChart?.data?.labels?.[i];
               return label !== undefined ? '€' + label : '';
             }
           },
@@ -1176,8 +1415,7 @@ function initCharts() {
           title: { display: true, text: 'Electricity Price (€/MWh)', color: 'rgba(255,255,255,0.4)', font: { size: 11 } }
         },
         y: {
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 11 },
-            callback: v => '€' + v },
+          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 11 }, callback: v => '€' + v },
           grid: { color: 'rgba(255,255,255,0.06)' },
           title: { display: true, text: '€/tonne methanol', color: 'rgba(255,255,255,0.4)', font: { size: 11 } }
         }
@@ -1200,7 +1438,7 @@ function initCharts() {
         ctx.fillStyle = 'rgba(255,69,58,0.65)';
         ctx.font = '10px -apple-system, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText('Fossil benchmark €350/t', chartArea.right - 4, benchmarkY - 5);
+        ctx.fillText('Fossil benchmark ~€350/t', chartArea.right - 4, benchmarkY - 5);
         ctx.restore();
       }
     }]
@@ -1213,12 +1451,40 @@ function initCharts() {
 
 function recalc() {
   const g = getGlobals();
+
+  // Update BW lookup displays whenever globals change
+  scenarios.forEach(sc => {
+    if (sc.h2source === 'brineworks') {
+      updateBWLookupDisplay(sc, g);
+    }
+  });
+
   const results = scenarios.map(sc => ({ sc, res: calcScenario(sc, g) }));
 
+  updateHeadlineMetrics(results);
   updateMainChart(results, g);
   updateTable(results);
   updateInsight(results, g);
   updateSensitivity(results, g);
+}
+
+function updateHeadlineMetrics(results) {
+  const minTotal = Math.min(...results.map(r => r.res.total));
+  const container = document.getElementById('headline-scenarios');
+  if (!container) return;
+
+  container.innerHTML = results.map(r => {
+    const isWinner = r.res.total === minTotal;
+    const color = COL_COLORS[r.sc.colKey];
+    return `
+      <div class="headline-scenario-item">
+        <div class="headline-scenario-name" style="color:${color}">${esc(r.sc.name)}</div>
+        <div class="headline-cost" style="color:${color}">€${Math.round(r.res.total)}</div>
+        <div class="headline-unit">per tonne methanol</div>
+        ${isWinner && results.length > 1 ? '<div class="headline-winner-badge">✓ Lowest Cost</div>' : ''}
+      </div>
+    `;
+  }).join('');
 }
 
 function updateMainChart(results, g) {
@@ -1233,26 +1499,37 @@ function updateMainChart(results, g) {
       borderRadius: 2
     },
     {
-      label: 'Electrolyzer / Brineworks CAPEX+O&M',
+      label: 'Electrolyzer CAPEX+O&M',
       data: results.map(r => r.res.elyzCapexCost),
       backgroundColor: COMP_COLORS.electrolyzer,
       borderRadius: 2
     },
     {
-      label: 'CO₂ Cost',
+      label: 'Brineworks System CAPEX+O&M',
+      data: results.map(r => r.res.bwCapexCost),
+      backgroundColor: COMP_COLORS.bw_system,
+      borderRadius: 2
+    },
+    {
+      label: 'Top-up Electrolyzer CAPEX+O&M',
+      data: results.map(r => r.res.topupCapexCost),
+      backgroundColor: COMP_COLORS.topup,
+      borderRadius: 2
+    },
+    {
+      label: 'CO₂ Supply',
       data: results.map(r => r.res.co2Cost),
       backgroundColor: COMP_COLORS.co2,
       borderRadius: 2
     },
     {
-      label: 'Methanol Synthesis CAPEX+O&M',
+      label: 'Synthesis CAPEX+O&M',
       data: results.map(r => r.res.synthCost),
       backgroundColor: COMP_COLORS.synthesis,
       borderRadius: 2
     }
   ];
 
-  // Dynamic height based on scenario count
   const chartH = Math.max(260, results.length * 80 + 80);
   document.querySelector('#main-chart').parentElement.style.height = chartH + 'px';
 
@@ -1270,7 +1547,7 @@ function updateTable(results) {
     const isWinner = i === winnerIdx;
     return `<th class="scenario-th ${isWinner ? 'winner-th' : ''}">
       <span style="color:${COL_COLORS[r.sc.colKey]}">${esc(r.sc.name)}</span>
-      ${isWinner ? '<span class="winner-badge-th">✓ Lowest Cost</span>' : ''}
+      ${isWinner && results.length > 1 ? '<span class="winner-badge-th">✓ Lowest Cost</span>' : ''}
     </th>`;
   }).join('');
 
@@ -1281,7 +1558,7 @@ function updateTable(results) {
       cls: 'total-cell'
     },
     {
-      label: 'LCOH (€/kg H₂)',
+      label: 'LCOH equiv. (€/kg H₂)',
       values: results.map(r => r.res.lcoh.toFixed(2))
     },
     {
@@ -1305,8 +1582,16 @@ function updateTable(results) {
       values: results.map(r => '€' + Math.round(r.res.co2Cost))
     },
     {
-      label: 'Electrolyzer/BW CAPEX (€/t MeOH)',
+      label: 'Electrolyzer CAPEX (€/t MeOH)',
       values: results.map(r => '€' + Math.round(r.res.elyzCapexCost))
+    },
+    {
+      label: 'Brineworks CAPEX (€/t MeOH)',
+      values: results.map(r => '€' + Math.round(r.res.bwCapexCost))
+    },
+    {
+      label: 'Top-up Electrolyzer CAPEX (€/t MeOH)',
+      values: results.map(r => '€' + Math.round(r.res.topupCapexCost))
     },
     {
       label: 'Synthesis CAPEX (€/t MeOH)',
@@ -1326,9 +1611,9 @@ function updateTable(results) {
 }
 
 function updateInsight(results, g) {
-  const sorted = [...results].sort((a,b) => a.res.total - b.res.total);
+  const sorted = [...results].sort((a, b) => a.res.total - b.res.total);
   const winner = sorted[0];
-  const baseline = results[0]; // first scenario = base case
+  const baseline = results[0];
 
   const diff = baseline.res.total - winner.res.total;
   const pct = baseline.res.total > 0 ? ((diff / baseline.res.total) * 100).toFixed(0) : 0;
@@ -1336,23 +1621,20 @@ function updateInsight(results, g) {
   let insightText = '';
 
   if (winner.sc.id === baseline.sc.id) {
-    insightText = `At €${g.elec}/MWh and ${(g.cf*100).toFixed(0)}% capacity factor, <strong>${esc(winner.sc.name)}</strong> is the most competitive configuration at <strong>€${Math.round(winner.res.total)}/tonne</strong>. `;
+    insightText = `At €${g.elec}/MWh and ${(g.cf * 100).toFixed(0)}% capacity factor, <strong>${esc(winner.sc.name)}</strong> is the most competitive configuration at <strong>€${Math.round(winner.res.total)}/tonne</strong>. `;
   } else {
-    insightText = `At €${g.elec}/MWh and ${(g.cf*100).toFixed(0)}% capacity factor, <strong>${esc(winner.sc.name)}</strong> delivers the cheapest methanol at <strong>€${Math.round(winner.res.total)}/tonne</strong> — <strong>€${Math.round(Math.abs(diff))} cheaper</strong> than ${esc(baseline.sc.name)} (${pct}% lower). `;
+    insightText = `At €${g.elec}/MWh and ${(g.cf * 100).toFixed(0)}% capacity factor, <strong>${esc(winner.sc.name)}</strong> delivers the cheapest methanol at <strong>€${Math.round(winner.res.total)}/tonne</strong> — <strong>€${Math.round(Math.abs(diff))} cheaper</strong> than ${esc(baseline.sc.name)} (${pct}% lower). `;
   }
 
-  // CO2 share comparison
   const baselineCO2Share = baseline.res.co2Share.toFixed(0);
   const bwScenario = results.find(r => r.sc.h2source === 'brineworks');
   if (bwScenario && baseline.sc.id !== bwScenario.sc.id) {
     insightText += `CO₂ accounts for <strong>${baselineCO2Share}%</strong> of total cost in ${esc(baseline.sc.name)} vs <strong>${bwScenario.res.co2Share.toFixed(0)}%</strong> with ${esc(bwScenario.sc.name)} (CO₂ bundled into system economics). `;
   }
 
-  // Benchmark comparison
-  const aboveBenchmark = results.filter(r => r.res.total > 350).length;
   const belowBenchmark = results.filter(r => r.res.total <= 350).length;
   if (belowBenchmark > 0) {
-    insightText += `<strong>${belowBenchmark} of ${results.length} scenario${results.length > 1 ? 's' : ''}</strong> achieve parity with fossil methanol (€350/tonne benchmark).`;
+    insightText += `<strong>${belowBenchmark} of ${results.length} scenario${results.length > 1 ? 's' : ''}</strong> achieve parity with fossil methanol (~€350/tonne benchmark).`;
   } else {
     insightText += `No scenarios yet achieve fossil parity — lowering electricity price or increasing capacity factor will help.`;
   }
@@ -1362,7 +1644,7 @@ function updateInsight(results, g) {
 
 function updateSensitivity(results, g) {
   const prices = [];
-  for (let p = 10; p <= 150; p += 10) prices.push(p);
+  for (let p = 0; p <= 100; p += 5) prices.push(p);
 
   sensChart.data.labels = prices;
   sensChart.data.datasets = results.map(r => ({
